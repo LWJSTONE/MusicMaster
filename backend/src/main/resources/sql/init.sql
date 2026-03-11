@@ -147,13 +147,14 @@ INSERT INTO `singer` (`name`, `sex`, `birth`, `location`, `introduction`, `pic`)
 ('林俊杰', 1, '1981-03-27', '新加坡', '华语流行乐坛著名男歌手', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg'),
 ('Taylor Swift', 0, '1989-12-13', '美国', '美国著名流行音乐歌手', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg');
 
--- 插入测试歌曲数据
+-- 插入测试歌曲数据（使用 SoundHelix 免费音乐）
 INSERT INTO `song` (`name`, `singer_id`, `singer_name`, `album`, `style`, `language`, `url`, `pic`, `duration`, `play_count`, `comment_count`, `collect_count`) VALUES
-('晴天', 1, '周杰伦', '叶惠美', '流行', '国语', 'https://music.example.com/song1.mp3', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 269, 100000, 500, 200),
-('七里香', 1, '周杰伦', '七里香', '流行', '国语', 'https://music.example.com/song2.mp3', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 298, 80000, 400, 150),
-('江南', 2, '林俊杰', '第二天堂', '流行', '国语', 'https://music.example.com/song3.mp3', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 245, 60000, 300, 120),
-('修炼爱情', 2, '林俊杰', '因你而在', '流行', '国语', 'https://music.example.com/song4.mp3', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 267, 90000, 450, 180),
-('Love Story', 3, 'Taylor Swift', 'Fearless', '流行', '英语', 'https://music.example.com/song5.mp3', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 237, 70000, 350, 140);
+('钢琴旋律', 1, 'SoundHelix', 'SoundHelix Collection', '古典', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', 'https://picsum.photos/200?random=1', 373, 100000, 500, 200),
+('摇滚吉他', 1, 'SoundHelix', 'SoundHelix Rock', '摇滚', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', 'https://picsum.photos/200?random=2', 295, 90000, 450, 180),
+('电子节拍', 2, 'Electronic Waves', 'Electronic Waves Vol.1', '电子', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', 'https://picsum.photos/200?random=3', 420, 80000, 400, 150),
+('梦幻氛围', 3, 'Piano Dreams', 'Piano Dreams', '氛围', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', 'https://picsum.photos/200?random=4', 335, 60000, 300, 120),
+('爵士钢琴', 3, 'Piano Dreams', 'Jazz Collection', '爵士', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3', 'https://picsum.photos/200?random=5', 267, 70000, 350, 140),
+('古典弦乐', 3, 'Piano Dreams', 'Classical Strings', '古典', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3', 'https://picsum.photos/200?random=6', 272, 50000, 250, 100);
 
 -- 插入测试歌单数据
 INSERT INTO `song_list` (`title`, `pic`, `introduction`, `style`, `creator_id`, `creator_name`, `collect_count`, `play_count`, `song_count`) VALUES

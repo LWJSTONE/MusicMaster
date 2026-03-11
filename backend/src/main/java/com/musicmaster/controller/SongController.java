@@ -5,8 +5,18 @@ import com.musicmaster.dto.ResponseDTO;
 import com.musicmaster.entity.Song;
 import com.musicmaster.service.SongService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * 歌曲管理控制器
@@ -18,6 +28,12 @@ public class SongController {
 
     @Autowired
     private SongService songService;
+
+    @Value("${file.upload.music-path:./uploads/music/}")
+    private String musicPath;
+
+    @Value("${file.upload.image-path:./uploads/image/}")
+    private String imagePath;
 
     /**
      * 添加歌曲
@@ -107,36 +123,127 @@ public class SongController {
     }
 
     /**
-     * 更新歌曲图片
+     * 上传音乐文件
      */
-    @PostMapping("/pic")
-    public ResponseDTO updateSongPic(
-            @RequestParam Long songId,
-            @RequestParam MultipartFile file) {
+    @PostMapping("/upload")
+    public ResponseDTO uploadMusic(@RequestParam("file") MultipartFile file) {
         try {
-            // 这里简化处理，实际应该上传文件并返回URL
-            String picUrl = "https://example.com/song/" + songId + ".jpg";
-            boolean result = songService.updatePic(songId, picUrl);
-            if (result) {
-                return ResponseDTO.success("图片更新成功", picUrl);
-            } else {
-                return ResponseDTO.error("图片更新失败");
+            if (file.isEmpty()) {
+                return ResponseDTO.paramError("请选择要上传的文件");
             }
-        } catch (Exception e) {
-            return ResponseDTO.error(e.getMessage());
+
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null) {
+                return ResponseDTO.paramError("文件名无效");
+            }
+
+            // 检查文件扩展名
+            String lowerName = originalFilename.toLowerCase();
+            if (!lowerName.endsWith(".mp3") && !lowerName.endsWith(".wav") 
+                && !lowerName.endsWith(".ogg") && !lowerName.endsWith(".m4a")) {
+                return ResponseDTO.paramError("不支持的文件格式，仅支持 MP3、WAV、OGG、M4A 格式");
+            }
+
+            // 创建上传目录
+            File uploadDir = new File(musicPath);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+
+            // 生成唯一文件名
+            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String newFilename = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + extension;
+            Path filePath = Paths.get(musicPath, newFilename);
+
+            // 保存文件
+            Files.write(filePath, file.getBytes());
+
+            // 返回访问URL
+            String url = "/uploads/music/" + newFilename;
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("filename", newFilename);
+            result.put("url", url);
+            result.put("originalName", originalFilename);
+            result.put("size", file.getSize());
+
+            return ResponseDTO.success("上传成功", result);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseDTO.error("文件上传失败: " + e.getMessage());
         }
     }
 
     /**
-     * 更新歌曲URL
+     * 上传歌曲封面图片
+     */
+    @PostMapping("/pic")
+    public ResponseDTO uploadPic(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseDTO.paramError("请选择要上传的图片");
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null) {
+                return ResponseDTO.paramError("文件名无效");
+            }
+
+            // 检查文件扩展名
+            String lowerName = originalFilename.toLowerCase();
+            if (!lowerName.endsWith(".jpg") && !lowerName.endsWith(".jpeg") 
+                && !lowerName.endsWith(".png") && !lowerName.endsWith(".gif")
+                && !lowerName.endsWith(".webp")) {
+                return ResponseDTO.paramError("不支持的图片格式，仅支持 JPG、PNG、GIF、WebP 格式");
+            }
+
+            // 创建上传目录
+            File uploadDir = new File(imagePath);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+
+            // 生成唯一文件名
+            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String newFilename = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + extension;
+            Path filePath = Paths.get(imagePath, newFilename);
+
+            // 保存文件
+            Files.write(filePath, file.getBytes());
+
+            // 返回访问URL
+            String url = "/uploads/image/" + newFilename;
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("filename", newFilename);
+            result.put("url", url);
+            result.put("originalName", originalFilename);
+            result.put("size", file.getSize());
+
+            return ResponseDTO.success("上传成功", result);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseDTO.error("图片上传失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新歌曲URL（带songId参数）
      */
     @PostMapping("/url")
     public ResponseDTO updateSongUrl(
             @RequestParam Long songId,
-            @RequestParam MultipartFile file) {
+            @RequestParam("file") MultipartFile file) {
         try {
-            // 这里简化处理，实际应该上传文件并返回URL
-            String url = "https://example.com/music/" + songId + ".mp3";
+            ResponseDTO uploadResult = uploadMusic(file);
+            if (uploadResult.getCode() != 200) {
+                return uploadResult;
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> data = (Map<String, Object>) uploadResult.getData();
+            String url = (String) data.get("url");
+
             boolean result = songService.updateUrl(songId, url);
             if (result) {
                 return ResponseDTO.success("音乐更新成功", url);

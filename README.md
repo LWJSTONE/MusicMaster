@@ -56,10 +56,11 @@ MusicMaster/
 
 ### 用户端
 - 登录/注册
-- 音乐播放
+- **音乐播放**（已修复，支持真实播放）
 - 收藏功能
 - 下载功能
 - 评论互动
+- **上传音乐**（新增功能）
 
 ## 快速开始
 
@@ -77,6 +78,46 @@ cd frontend
 npm install
 npm run serve
 ```
+
+## 更新日志
+
+### v1.1.0 (fix分支更新)
+
+#### 🎵 修复音乐播放问题
+**问题描述**：原播放器只是 UI 状态变化，没有实际播放音乐
+
+**解决方案**：
+- 添加 HTML5 `<audio>` 元素实现真实音频播放
+- 实现播放/暂停控制功能
+- 实现进度条实时更新（100ms 刷新）
+- 实现进度条拖动定位功能
+- 实现音量控制和静音切换
+- 实现上一曲/下一曲切换
+- 实现自动播放下一曲
+
+**修改文件**：`frontend/src/views/Player.vue`
+
+#### 📤 添加音乐上传功能
+**新增功能**：
+- 音乐文件上传（支持 MP3、WAV、OGG、M4A 格式）
+- 封面图片上传（支持 JPG、PNG、GIF、WebP 格式）
+- 文件保存到服务器本地 uploads 目录
+- 返回可访问的 URL
+
+**修改文件**：`backend/src/main/java/com/musicmaster/controller/SongController.java`
+
+**新增接口**：
+- `POST /api/song/upload` - 上传音乐文件
+- `POST /api/song/pic` - 上传封面图片
+
+#### 🎶 更新测试数据
+**更新内容**：
+- 使用 SoundHelix 免费音乐作为测试数据
+- 添加 6 首可实际播放的测试音乐
+- 更新歌手和歌单数据
+- 测试账号：admin / admin123
+
+**修改文件**：`backend/src/main/resources/sql/init.sql`
 
 ## 详细文档
 - [应用背景](docs/应用背景.md)

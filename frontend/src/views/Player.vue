@@ -1,5 +1,8 @@
 <template>
   <div class="player-container">
+    <!-- 隐藏的音频元素 -->
+    <audio ref="audioPlayer" @ended="onSongEnded" @loadedmetadata="onLoadedMetadata" @timeupdate="onTimeUpdate"></audio>
+    
     <el-row :gutter="20">
       <!-- 歌手列表 -->
       <el-col :span="6">
@@ -27,13 +30,13 @@
             <el-button size="small" @click="loadAllSongs" v-if="currentSinger">显示全部</el-button>
           </div>
           <div class="song-list">
-            <div v-for="song in songs" :key="song.id" class="song-item" :class="{ 'playing': currentSong && currentSong.id === song.id }" @click="playSong(song)">
+            <div v-for="(song, index) in songs" :key="song.id" class="song-item" :class="{ 'playing': currentSong && currentSong.id === song.id }" @click="playSong(song, index)">
               <div class="song-info">
                 <div class="song-name">{{ song.name }}</div>
                 <div class="song-meta">{{ song.album }} · {{ song.style }} · {{ formatTime(song.duration) }}</div>
               </div>
               <div class="song-actions">
-                <el-button size="mini" icon="el-icon-video-play" circle @click.stop="playSong(song)"></el-button>
+                <el-button size="mini" :icon="currentSong && currentSong.id === song.id && isPlaying ? 'el-icon-video-pause' : 'el-icon-video-play'" circle @click.stop="playSong(song, index)"></el-button>
               </div>
             </div>
           </div>
@@ -71,20 +74,19 @@
 
       <div class="player-controls">
         <el-button icon="el-icon-refresh-left" circle @click="prevSong"></el-button>
-        <el-button icon="el-icon-video-play" circle size="large" @click="togglePlay" v-if="!isPlaying"></el-button>
-        <el-button icon="el-icon-video-pause" circle size="large" @click="togglePlay" v-else></el-button>
+        <el-button :icon="isPlaying ? 'el-icon-video-pause' : 'el-icon-video-play'" circle size="large" @click="togglePlay"></el-button>
         <el-button icon="el-icon-refresh-right" circle @click="nextSong"></el-button>
       </div>
 
       <div class="player-progress">
         <span>{{ formatTime(currentTime) }}</span>
         <el-slider v-model="progress" @change="seekTo" :disabled="!currentSong" style="flex: 1; margin: 0 15px;"></el-slider>
-        <span>{{ formatTime(currentSong ? currentSong.duration : 0) }}</span>
+        <span>{{ formatTime(actualDuration || (currentSong ? currentSong.duration : 0)) }}</span>
       </div>
 
       <div class="player-volume">
-        <el-icon class="el-icon-microphone"></el-icon>
-        <el-slider v-model="volume" @change="changeVolume" style="width: 100px; margin-left: 10px;"></el-slider>
+        <i :class="isMuted ? 'el-icon-turn-off-microphone' : 'el-icon-microphone'" @click="toggleMute" style="cursor: pointer;"></i>
+        <el-slider v-model="volume" @input="changeVolume" style="width: 100px; margin-left: 10px;"></el-slider>
       </div>
     </div>
   </div>
@@ -102,11 +104,27 @@ export default {
       songlists: [],
       currentSinger: null,
       currentSong: null,
+      currentIndex: -1,
       isPlaying: false,
       currentTime: 0,
       progress: 0,
       volume: 80,
+      isMuted: false,
+      actualDuration: 0,
+      progressInterval: null,
       defaultPic: 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg'
+    }
+  },
+  mounted() {
+    // 初始化音频
+    if (this.$refs.audioPlayer) {
+      this.$refs.audioPlayer.volume = this.volume / 100
+    }
+  },
+  beforeDestroy() {
+    // 清理定时器
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval)
     }
   },
   created() {
@@ -163,45 +181,141 @@ export default {
       this.$message.info(`选中歌单: ${songlist.title}`)
     },
 
-    playSong(song) {
+    playSong(song, index) {
+      if (!song.url) {
+        this.$message.warning('该歌曲暂无播放地址')
+        return
+      }
+
       this.currentSong = song
-      this.isPlaying = true
+      this.currentIndex = index
       this.currentTime = 0
       this.progress = 0
+
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.src = song.url
+        audio.load()
+        audio.play().then(() => {
+          this.isPlaying = true
+          this.startProgressTracking()
+        }).catch(err => {
+          console.error('播放失败:', err)
+          this.$message.error('播放失败，请检查音频文件')
+          this.isPlaying = false
+        })
+      }
     },
 
     togglePlay() {
-      this.isPlaying = !this.isPlaying
+      const audio = this.$refs.audioPlayer
+      if (!audio) return
+
+      if (this.isPlaying) {
+        audio.pause()
+        this.isPlaying = false
+        this.stopProgressTracking()
+      } else {
+        if (!audio.src && this.songs.length > 0) {
+          this.playSong(this.songs[0], 0)
+        } else {
+          audio.play().then(() => {
+            this.isPlaying = true
+            this.startProgressTracking()
+          }).catch(err => {
+            console.error('播放失败:', err)
+          })
+        }
+      }
     },
 
     prevSong() {
-      if (this.songs.length > 0) {
-        const currentIndex = this.songs.findIndex(s => s.id === this.currentSong.id)
-        const prevIndex = currentIndex > 0 ? currentIndex - 1 : this.songs.length - 1
-        this.playSong(this.songs[prevIndex])
+      if (this.songs.length > 0 && this.currentIndex > -1) {
+        const prevIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.songs.length - 1
+        this.playSong(this.songs[prevIndex], prevIndex)
       }
     },
 
     nextSong() {
-      if (this.songs.length > 0) {
-        const currentIndex = this.songs.findIndex(s => s.id === this.currentSong.id)
-        const nextIndex = currentIndex < this.songs.length - 1 ? currentIndex + 1 : 0
-        this.playSong(this.songs[nextIndex])
+      if (this.songs.length > 0 && this.currentIndex > -1) {
+        const nextIndex = this.currentIndex < this.songs.length - 1 ? this.currentIndex + 1 : 0
+        this.playSong(this.songs[nextIndex], nextIndex)
       }
     },
 
     seekTo(value) {
-      if (this.currentSong) {
-        this.currentTime = (value / 100) * this.currentSong.duration
+      const audio = this.$refs.audioPlayer
+      if (audio && this.actualDuration > 0) {
+        const newTime = (value / 100) * this.actualDuration
+        audio.currentTime = newTime
+        this.currentTime = newTime
       }
     },
 
     changeVolume(value) {
-      // 音量控制
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.volume = value / 100
+        if (value > 0) {
+          this.isMuted = false
+        }
+      }
+    },
+
+    toggleMute() {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        this.isMuted = !this.isMuted
+        audio.muted = this.isMuted
+      }
+    },
+
+    onSongEnded() {
+      this.isPlaying = false
+      this.stopProgressTracking()
+      // 自动播放下一首
+      this.nextSong()
+    },
+
+    onLoadedMetadata() {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        this.actualDuration = audio.duration
+      }
+    },
+
+    onTimeUpdate() {
+      const audio = this.$refs.audioPlayer
+      if (audio && this.isPlaying) {
+        this.currentTime = audio.currentTime
+        if (this.actualDuration > 0) {
+          this.progress = (audio.currentTime / this.actualDuration) * 100
+        }
+      }
+    },
+
+    startProgressTracking() {
+      this.stopProgressTracking()
+      this.progressInterval = setInterval(() => {
+        const audio = this.$refs.audioPlayer
+        if (audio && this.isPlaying) {
+          this.currentTime = audio.currentTime
+          if (this.actualDuration > 0) {
+            this.progress = (audio.currentTime / this.actualDuration) * 100
+          }
+        }
+      }, 100)
+    },
+
+    stopProgressTracking() {
+      if (this.progressInterval) {
+        clearInterval(this.progressInterval)
+        this.progressInterval = null
+      }
     },
 
     formatTime(seconds) {
-      if (!seconds) return '00:00'
+      if (!seconds || isNaN(seconds)) return '00:00'
       const mins = Math.floor(seconds / 60)
       const secs = Math.floor(seconds % 60)
       return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
