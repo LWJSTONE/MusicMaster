@@ -139,7 +139,7 @@ public class SongController {
 
             // 检查文件扩展名
             String lowerName = originalFilename.toLowerCase();
-            if (!lowerName.endsWith(".mp3") && !lowerName.endsWith(".wav") 
+            if (!lowerName.endsWith(".mp3") && !lowerName.endsWith(".wav")
                 && !lowerName.endsWith(".ogg") && !lowerName.endsWith(".m4a")) {
                 return ResponseDTO.paramError("不支持的文件格式，仅支持 MP3、WAV、OGG、M4A 格式");
             }
@@ -158,8 +158,8 @@ public class SongController {
             // 保存文件
             Files.write(filePath, file.getBytes());
 
-            // 返回访问URL
-            String url = "/uploads/music/" + newFilename;
+            // 返回访问URL - 使用 /api/uploads/music/ 作为前缀，确保通过后端context-path访问
+            String url = "/api/uploads/music/" + newFilename;
 
             Map<String, Object> result = new HashMap<>();
             result.put("filename", newFilename);
@@ -191,7 +191,7 @@ public class SongController {
 
             // 检查文件扩展名
             String lowerName = originalFilename.toLowerCase();
-            if (!lowerName.endsWith(".jpg") && !lowerName.endsWith(".jpeg") 
+            if (!lowerName.endsWith(".jpg") && !lowerName.endsWith(".jpeg")
                 && !lowerName.endsWith(".png") && !lowerName.endsWith(".gif")
                 && !lowerName.endsWith(".webp")) {
                 return ResponseDTO.paramError("不支持的图片格式，仅支持 JPG、PNG、GIF、WebP 格式");
@@ -211,8 +211,8 @@ public class SongController {
             // 保存文件
             Files.write(filePath, file.getBytes());
 
-            // 返回访问URL
-            String url = "/uploads/image/" + newFilename;
+            // 返回访问URL - 使用 /api/uploads/image/ 作为前缀
+            String url = "/api/uploads/image/" + newFilename;
 
             Map<String, Object> result = new HashMap<>();
             result.put("filename", newFilename);
