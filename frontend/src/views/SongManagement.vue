@@ -295,14 +295,14 @@ export default {
 
     handlePicSuccess(res, file) {
       if (res.code === 200) {
-        this.songForm.pic = res.data
+        this.songForm.pic = res.data.url
         this.$message.success('图片上传成功')
       }
     },
 
     handleUrlSuccess(res, file) {
       if (res.code === 200) {
-        this.songForm.url = res.data
+        this.songForm.url = res.data.url
         this.$message.success('音乐上传成功')
       }
     },

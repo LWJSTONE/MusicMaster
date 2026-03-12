@@ -253,7 +253,7 @@ export default {
 
     handlePicSuccess(res, file) {
       if (res.code === 200) {
-        this.singerForm.pic = res.data
+        this.singerForm.pic = res.data.url
         this.$message.success('图片上传成功')
       }
     },
