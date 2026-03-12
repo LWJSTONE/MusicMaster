@@ -10,6 +10,7 @@ import CommentManagement from '@/views/CommentManagement.vue'
 import CollectManagement from '@/views/CollectManagement.vue'
 import Statistics from '@/views/Statistics.vue'
 import Player from '@/views/Player.vue'
+import MyComments from '@/views/MyComments.vue'
 
 Vue.use(VueRouter)
 
@@ -70,6 +71,12 @@ const routes = [
         name: 'CollectManagement',
         component: CollectManagement,
         meta: { title: '收藏管理' }
+      },
+      {
+        path: '/my-comments',
+        name: 'MyComments',
+        component: MyComments,
+        meta: { title: '我的评论' }
       },
       {
         path: '/statistics',

@@ -2,7 +2,7 @@
   <div class="player-container">
     <!-- 隐藏的音频元素 -->
     <audio ref="audioPlayer" @ended="onSongEnded" @loadedmetadata="onLoadedMetadata" @timeupdate="onTimeUpdate"></audio>
-    
+
     <el-row :gutter="20">
       <!-- 歌手列表 -->
       <el-col :span="6">
@@ -27,7 +27,10 @@
         <el-card class="card">
           <div slot="header" class="card-header">
             <span>{{ currentSinger ? currentSinger.name + ' 的歌曲' : '所有歌曲' }}</span>
-            <el-button size="small" @click="loadAllSongs" v-if="currentSinger">显示全部</el-button>
+            <div>
+              <el-button size="small" @click="loadAllSongs" v-if="currentSinger" style="margin-right: 10px;">显示全部</el-button>
+              <el-button size="small" type="primary" @click="showUploadDialog">上传音乐</el-button>
+            </div>
           </div>
           <div class="song-list">
             <div v-for="(song, index) in songs" :key="song.id" class="song-item" :class="{ 'playing': currentSong && currentSong.id === song.id }" @click="playSong(song, index)">
@@ -43,9 +46,9 @@
         </el-card>
       </el-col>
 
-      <!-- 歌单列表 -->
+      <!-- 歌单列表和评论区 -->
       <el-col :span="6">
-        <el-card class="card">
+        <el-card class="card songlist-card">
           <div slot="header" class="card-header">
             <span>歌单列表</span>
           </div>
@@ -55,6 +58,48 @@
               <div class="songlist-info">
                 <div class="songlist-name">{{ songlist.title }}</div>
                 <div class="songlist-meta">{{ songlist.songCount }} 首歌 · {{ songlist.collectCount }} 收藏</div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 评论区 -->
+        <el-card class="card comment-card" v-if="currentSong">
+          <div slot="header" class="card-header">
+            <span>评论 ({{ comments.length }})</span>
+          </div>
+          <div class="comment-section">
+            <!-- 发表评论 -->
+            <div class="comment-input">
+              <el-input
+                type="textarea"
+                v-model="newComment"
+                placeholder="发表评论..."
+                :rows="2"
+                maxlength="200"
+                show-word-limit>
+              </el-input>
+              <el-button type="primary" size="small" @click="submitComment" :disabled="!newComment.trim()" style="margin-top: 10px;">发表评论</el-button>
+            </div>
+            <!-- 评论列表 -->
+            <div class="comment-list">
+              <div v-for="comment in comments" :key="comment.id" class="comment-item">
+                <div class="comment-avatar">
+                  <img :src="comment.avatar || defaultPic">
+                </div>
+                <div class="comment-content">
+                  <div class="comment-user">{{ comment.username }}</div>
+                  <div class="comment-text">{{ comment.content }}</div>
+                  <div class="comment-meta">
+                    <span>{{ formatDate(comment.createTime) }}</span>
+                    <el-button type="text" size="mini" @click="likeComment(comment)">
+                      <i class="el-icon-thumb"></i> {{ comment.up || 0 }}
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+              <div v-if="comments.length === 0" class="no-comment">
+                暂无评论，快来发表第一条评论吧~
               </div>
             </div>
           </div>
@@ -89,6 +134,67 @@
         <el-slider v-model="volume" @input="changeVolume" style="width: 100px; margin-left: 10px;"></el-slider>
       </div>
     </div>
+
+    <!-- 上传音乐对话框 -->
+    <el-dialog title="上传音乐" :visible.sync="uploadDialogVisible" width="600px">
+      <el-form :model="uploadForm" :rules="uploadRules" ref="uploadForm" label-width="80px">
+        <el-form-item label="歌曲名称" prop="name">
+          <el-input v-model="uploadForm.name" placeholder="请输入歌曲名称"></el-input>
+        </el-form-item>
+        <el-form-item label="歌手" prop="singerId">
+          <el-select v-model="uploadForm.singerId" placeholder="请选择歌手" @change="handleUploadSingerChange" style="width: 100%;">
+            <el-option
+              v-for="singer in singers"
+              :key="singer.id"
+              :label="singer.name"
+              :value="singer.id">
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="专辑">
+          <el-input v-model="uploadForm.album" placeholder="请输入专辑名称"></el-input>
+        </el-form-item>
+        <el-form-item label="风格">
+          <el-input v-model="uploadForm.style" placeholder="如：流行、摇滚、民谣"></el-input>
+        </el-form-item>
+        <el-form-item label="语言">
+          <el-input v-model="uploadForm.language" placeholder="如：国语、英语、日语"></el-input>
+        </el-form-item>
+        <el-form-item label="封面图片">
+          <el-upload
+            class="cover-uploader"
+            action="/api/song/pic"
+            :show-file-list="false"
+            :on-success="handleCoverSuccess"
+            :before-upload="beforeCoverUpload">
+            <img v-if="uploadForm.pic" :src="uploadForm.pic" class="cover-preview">
+            <i v-else class="el-icon-plus cover-uploader-icon"></i>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="音乐文件" prop="url">
+          <el-upload
+            class="music-uploader"
+            action="/api/song/upload"
+            :show-file-list="false"
+            :on-success="handleMusicSuccess"
+            :before-upload="beforeMusicUpload"
+            :file-list="musicFileList">
+            <el-button size="small" type="primary">
+              <i class="el-icon-upload2"></i> 选择音乐文件
+            </el-button>
+            <div slot="tip" class="el-upload__tip">支持 MP3、WAV、OGG、M4A 格式，最大 50MB</div>
+          </el-upload>
+          <div v-if="uploadForm.url" class="music-uploaded">
+            <i class="el-icon-success" style="color: #67C23A;"></i>
+            <span>音乐文件已上传</span>
+          </div>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitUpload" :loading="uploading">确定上传</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -112,7 +218,35 @@ export default {
       isMuted: false,
       actualDuration: 0,
       progressInterval: null,
-      defaultPic: 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg'
+      defaultPic: 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg',
+      // 评论相关
+      comments: [],
+      newComment: '',
+      // 上传相关
+      uploadDialogVisible: false,
+      uploading: false,
+      musicFileList: [],
+      uploadForm: {
+        name: '',
+        singerId: null,
+        singerName: '',
+        album: '',
+        style: '',
+        language: '',
+        pic: '',
+        url: ''
+      },
+      uploadRules: {
+        name: [
+          { required: true, message: '请输入歌曲名称', trigger: 'blur' }
+        ],
+        singerId: [
+          { required: true, message: '请选择歌手', trigger: 'change' }
+        ],
+        url: [
+          { required: true, message: '请上传音乐文件', trigger: 'change' }
+        ]
+      }
     }
   },
   mounted() {
@@ -205,6 +339,9 @@ export default {
           this.isPlaying = false
         })
       }
+
+      // 加载歌曲评论
+      this.loadComments(song.id)
     },
 
     togglePlay() {
@@ -319,6 +456,191 @@ export default {
       const mins = Math.floor(seconds / 60)
       const secs = Math.floor(seconds % 60)
       return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+
+    // 评论相关方法
+    loadComments(songId) {
+      axios.get('/api/comment/page', {
+        params: {
+          current: 1,
+          size: 50,
+          songId: songId
+        }
+      }).then(res => {
+        if (res.data.code === 200) {
+          this.comments = res.data.data.records || []
+        }
+      }).catch(err => {
+        console.error('加载评论失败:', err)
+        this.comments = []
+      })
+    },
+
+    submitComment() {
+      if (!this.newComment.trim()) {
+        this.$message.warning('请输入评论内容')
+        return
+      }
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        this.$message.error('请先登录')
+        return
+      }
+
+      const comment = {
+        userId: user.id,
+        username: user.nickname || user.username,
+        avatar: user.avatar || '',
+        songId: this.currentSong.id,
+        type: 0, // 歌曲评论
+        content: this.newComment.trim()
+      }
+
+      axios.post('/api/comment', comment).then(res => {
+        if (res.data.code === 200) {
+          this.$message.success('评论成功')
+          this.newComment = ''
+          this.loadComments(this.currentSong.id)
+        } else {
+          this.$message.error(res.data.message || '评论失败')
+        }
+      }).catch(err => {
+        this.$message.error('评论失败')
+        console.error(err)
+      })
+    },
+
+    likeComment(comment) {
+      axios.post(`/api/comment/up/${comment.id}`).then(res => {
+        if (res.data.code === 200) {
+          comment.up = (comment.up || 0) + 1
+          this.$message.success('点赞成功')
+        }
+      }).catch(err => {
+        console.error('点赞失败:', err)
+      })
+    },
+
+    formatDate(dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      const now = new Date()
+      const diff = now - date
+      const minutes = Math.floor(diff / 60000)
+      const hours = Math.floor(diff / 3600000)
+      const days = Math.floor(diff / 86400000)
+
+      if (minutes < 1) return '刚刚'
+      if (minutes < 60) return `${minutes}分钟前`
+      if (hours < 24) return `${hours}小时前`
+      if (days < 30) return `${days}天前`
+      return date.toLocaleDateString('zh-CN')
+    },
+
+    // 上传相关方法
+    showUploadDialog() {
+      this.uploadForm = {
+        name: '',
+        singerId: null,
+        singerName: '',
+        album: '',
+        style: '',
+        language: '',
+        pic: '',
+        url: ''
+      }
+      this.musicFileList = []
+      this.uploadDialogVisible = true
+    },
+
+    handleUploadSingerChange(value) {
+      const singer = this.singers.find(s => s.id === value)
+      if (singer) {
+        this.uploadForm.singerName = singer.name
+      }
+    },
+
+    beforeCoverUpload(file) {
+      const isImage = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
+      const isLt5M = file.size / 1024 / 1024 < 5
+
+      if (!isImage) {
+        this.$message.error('只能上传 JPG/PNG/GIF/WebP 格式的图片!')
+        return false
+      }
+      if (!isLt5M) {
+        this.$message.error('图片大小不能超过 5MB!')
+        return false
+      }
+      return true
+    },
+
+    handleCoverSuccess(res, file) {
+      if (res.code === 200) {
+        this.uploadForm.pic = res.data.url
+        this.$message.success('封面图片上传成功')
+      } else {
+        this.$message.error(res.message || '上传失败')
+      }
+    },
+
+    beforeMusicUpload(file) {
+      const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/x-m4a']
+      const isAudio = allowedTypes.includes(file.type) ||
+        file.name.toLowerCase().match(/\.(mp3|wav|ogg|m4a)$/)
+      const isLt50M = file.size / 1024 / 1024 < 50
+
+      if (!isAudio) {
+        this.$message.error('只能上传 MP3、WAV、OGG、M4A 格式的音乐文件!')
+        return false
+      }
+      if (!isLt50M) {
+        this.$message.error('音乐文件大小不能超过 50MB!')
+        return false
+      }
+      return true
+    },
+
+    handleMusicSuccess(res, file) {
+      if (res.code === 200) {
+        this.uploadForm.url = res.data.url
+        this.$message.success('音乐文件上传成功')
+        // 自动填充歌曲名称（如果没有填写）
+        if (!this.uploadForm.name && res.data.originalName) {
+          this.uploadForm.name = res.data.originalName.replace(/\.(mp3|wav|ogg|m4a)$/i, '')
+        }
+      } else {
+        this.$message.error(res.message || '上传失败')
+      }
+    },
+
+    submitUpload() {
+      this.$refs.uploadForm.validate(valid => {
+        if (valid) {
+          if (!this.uploadForm.url) {
+            this.$message.error('请先上传音乐文件')
+            return
+          }
+
+          this.uploading = true
+
+          axios.post('/api/song', this.uploadForm).then(res => {
+            this.uploading = false
+            if (res.data.code === 200) {
+              this.$message.success('歌曲上传成功')
+              this.uploadDialogVisible = false
+              this.loadAllSongs()
+            } else {
+              this.$message.error(res.data.message || '上传失败')
+            }
+          }).catch(err => {
+            this.uploading = false
+            this.$message.error('上传失败')
+            console.error(err)
+          })
+        }
+      })
     }
   }
 }
@@ -470,5 +792,124 @@ export default {
   display: flex;
   align-items: center;
   width: 150px;
+}
+
+/* 评论样式 */
+.songlist-card {
+  height: 200px;
+  margin-bottom: 20px;
+}
+
+.comment-card {
+  height: calc(100vh - 420px);
+}
+
+.comment-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.comment-input {
+  margin-bottom: 15px;
+}
+
+.comment-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.comment-item {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-avatar img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 12px;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-user {
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.comment-text {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 12px;
+  color: #999;
+}
+
+.no-comment {
+  text-align: center;
+  color: #999;
+  padding: 30px 0;
+  font-size: 13px;
+}
+
+/* 上传相关样式 */
+.cover-uploader {
+  display: inline-block;
+}
+
+.cover-uploader >>> .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-uploader >>> .el-upload:hover {
+  border-color: #409EFF;
+}
+
+.cover-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100px;
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+  display: block;
+}
+
+.cover-preview {
+  width: 100px;
+  height: 100px;
+  display: block;
+  object-fit: cover;
+}
+
+.music-uploaded {
+  margin-top: 10px;
+  color: #67C23A;
+  font-size: 13px;
+}
+
+.music-uploaded i {
+  margin-right: 5px;
 }
 </style>

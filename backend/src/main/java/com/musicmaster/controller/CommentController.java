@@ -77,9 +77,11 @@ public class CommentController {
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) Long songId,
-            @RequestParam(required = false) Long songListId) {
+            @RequestParam(required = false) Long songListId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Integer type) {
         try {
-            Page<Comment> page = commentService.getCommentPage(current, size, songId, songListId);
+            Page<Comment> page = commentService.getCommentPage(current, size, songId, songListId, userId);
             return ResponseDTO.success(page);
         } catch (Exception e) {
             return ResponseDTO.error(e.getMessage());

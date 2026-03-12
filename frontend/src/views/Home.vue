@@ -20,6 +20,11 @@
             <span>我的收藏</span>
           </el-menu-item>
 
+          <el-menu-item index="/my-comments">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>我的评论</span>
+          </el-menu-item>
+
           <el-submenu index="admin" v-if="isAdmin">
             <template slot="title">
               <i class="el-icon-s-tools"></i>
@@ -41,6 +46,8 @@
             <h2>{{ pageTitle }}</h2>
             <div class="user-info">
               <span>{{ userInfo.nickname || userInfo.username }}</span>
+              <el-tag v-if="isAdmin" type="danger" size="mini" style="margin-left: 8px;">管理员</el-tag>
+              <el-tag v-else type="success" size="mini" style="margin-left: 8px;">普通用户</el-tag>
               <el-button type="text" @click="logout" style="margin-left: 10px;">退出</el-button>
             </div>
           </div>

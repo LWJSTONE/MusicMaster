@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> implements CommentService {
 
     @Override
-    public Page<Comment> getCommentPage(Integer current, Integer size, Long songId, Long songListId) {
+    public Page<Comment> getCommentPage(Integer current, Integer size, Long songId, Long songListId, Long userId) {
         Page<Comment> page = new Page<>(current, size);
         QueryWrapper<Comment> queryWrapper = new QueryWrapper<>();
 
@@ -25,6 +25,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         }
         if (songListId != null) {
             queryWrapper.eq("song_list_id", songListId);
+        }
+        if (userId != null) {
+            queryWrapper.eq("user_id", userId);
         }
 
         queryWrapper.orderByDesc("create_time");

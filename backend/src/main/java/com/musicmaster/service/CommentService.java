@@ -15,9 +15,10 @@ public interface CommentService extends IService<Comment> {
      * @param size 每页条数
      * @param songId 歌曲ID（可选）
      * @param songListId 歌单ID（可选）
+     * @param userId 用户ID（可选）
      * @return 分页结果
      */
-    Page<Comment> getCommentPage(Integer current, Integer size, Long songId, Long songListId);
+    Page<Comment> getCommentPage(Integer current, Integer size, Long songId, Long songListId, Long userId);
 
     /**
      * 点赞评论
