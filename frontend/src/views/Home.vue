@@ -15,6 +15,16 @@
             <span>音乐播放</span>
           </el-menu-item>
 
+          <el-menu-item index="/my-songlists">
+            <i class="el-icon-folder-opened"></i>
+            <span>我的歌单</span>
+          </el-menu-item>
+
+          <el-menu-item index="/my-songs">
+            <i class="el-icon-mic"></i>
+            <span>我的音乐</span>
+          </el-menu-item>
+
           <el-menu-item index="/collect">
             <i class="el-icon-star-off"></i>
             <span>我的收藏</span>
@@ -23,6 +33,11 @@
           <el-menu-item index="/my-comments">
             <i class="el-icon-chat-dot-round"></i>
             <span>我的评论</span>
+          </el-menu-item>
+
+          <el-menu-item index="/profile">
+            <i class="el-icon-user"></i>
+            <span>个人中心</span>
           </el-menu-item>
 
           <el-submenu index="admin" v-if="isAdmin">
@@ -45,7 +60,8 @@
           <div class="header-content">
             <h2>{{ pageTitle }}</h2>
             <div class="user-info">
-              <span>{{ userInfo.nickname || userInfo.username }}</span>
+              <img :src="userInfo.avatar || defaultAvatar" class="user-avatar" @click="goToProfile">
+              <span class="user-name" @click="goToProfile">{{ userInfo.nickname || userInfo.username }}</span>
               <el-tag v-if="isAdmin" type="danger" size="mini" style="margin-left: 8px;">管理员</el-tag>
               <el-tag v-else type="success" size="mini" style="margin-left: 8px;">普通用户</el-tag>
               <el-button type="text" @click="logout" style="margin-left: 10px;">退出</el-button>
@@ -66,7 +82,8 @@ export default {
   name: 'Home',
   data() {
     return {
-      userInfo: {}
+      userInfo: {},
+      defaultAvatar: 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg'
     }
   },
   computed: {
@@ -81,6 +98,9 @@ export default {
     this.userInfo = JSON.parse(localStorage.getItem('user') || '{}')
   },
   methods: {
+    goToProfile() {
+      this.$router.push('/profile')
+    },
     logout() {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
@@ -142,6 +162,24 @@ export default {
 .user-info {
   display: flex;
   align-items: center;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.user-name {
+  cursor: pointer;
+  color: #333;
+}
+
+.user-name:hover {
+  color: #409EFF;
 }
 
 .main {

@@ -11,6 +11,9 @@ import CollectManagement from '@/views/CollectManagement.vue'
 import Statistics from '@/views/Statistics.vue'
 import Player from '@/views/Player.vue'
 import MyComments from '@/views/MyComments.vue'
+import MySongLists from '@/views/MySongLists.vue'
+import MySongs from '@/views/MySongs.vue'
+import Profile from '@/views/Profile.vue'
 
 Vue.use(VueRouter)
 
@@ -35,6 +38,36 @@ const routes = [
         name: 'Player',
         component: Player,
         meta: { title: '音乐播放' }
+      },
+      {
+        path: '/collect',
+        name: 'CollectManagement',
+        component: CollectManagement,
+        meta: { title: '我的收藏' }
+      },
+      {
+        path: '/my-comments',
+        name: 'MyComments',
+        component: MyComments,
+        meta: { title: '我的评论' }
+      },
+      {
+        path: '/my-songlists',
+        name: 'MySongLists',
+        component: MySongLists,
+        meta: { title: '我的歌单' }
+      },
+      {
+        path: '/my-songs',
+        name: 'MySongs',
+        component: MySongs,
+        meta: { title: '我的音乐' }
+      },
+      {
+        path: '/profile',
+        name: 'Profile',
+        component: Profile,
+        meta: { title: '个人中心' }
       },
       {
         path: '/user',
@@ -65,18 +98,6 @@ const routes = [
         name: 'CommentManagement',
         component: CommentManagement,
         meta: { title: '评论管理', requiresAdmin: true }
-      },
-      {
-        path: '/collect',
-        name: 'CollectManagement',
-        component: CollectManagement,
-        meta: { title: '收藏管理' }
-      },
-      {
-        path: '/my-comments',
-        name: 'MyComments',
-        component: MyComments,
-        meta: { title: '我的评论' }
       },
       {
         path: '/statistics',

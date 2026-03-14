@@ -133,6 +133,29 @@ CREATE TABLE `collect` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收藏表';
 
 -- =====================================
+-- 歌单歌曲关联表
+-- =====================================
+DROP TABLE IF EXISTS `song_list_item`;
+CREATE TABLE `song_list_item` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '关联ID',
+  `song_list_id` bigint(20) NOT NULL COMMENT '歌单ID',
+  `song_id` bigint(20) NOT NULL COMMENT '歌曲ID',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '添加时间',
+  `deleted` tinyint(4) DEFAULT '0' COMMENT '删除标记：0-未删除，1-已删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_song_list_song` (`song_list_id`, `song_id`),
+  KEY `idx_song_list_id` (`song_list_id`),
+  KEY `idx_song_id` (`song_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='歌单歌曲关联表';
+
+-- =====================================
+-- 歌曲上传者关联字段（为song表添加uploader_id字段）
+-- =====================================
+ALTER TABLE `song` ADD COLUMN `uploader_id` bigint(20) DEFAULT NULL COMMENT '上传者用户ID' AFTER `collect_count`;
+ALTER TABLE `song` ADD COLUMN `uploader_name` varchar(50) DEFAULT NULL COMMENT '上传者用户名' AFTER `uploader_id`;
+ALTER TABLE `song` ADD INDEX `idx_uploader_id` (`uploader_id`);
+
+-- =====================================
 -- 初始化测试数据
 -- =====================================
 

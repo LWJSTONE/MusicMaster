@@ -77,6 +77,16 @@ public class Song {
     private Integer collectCount;
 
     /**
+     * 上传者用户ID
+     */
+    private Long uploaderId;
+
+    /**
+     * 上传者用户名
+     */
+    private String uploaderName;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

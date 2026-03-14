@@ -1,5 +1,6 @@
 package com.musicmaster.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.musicmaster.dto.ResponseDTO;
 import com.musicmaster.entity.Song;
@@ -15,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,6 +43,17 @@ public class SongController {
     @PostMapping
     public ResponseDTO addSong(@RequestBody Song song) {
         try {
+            // 设置默认值
+            if (song.getPlayCount() == null) {
+                song.setPlayCount(0);
+            }
+            if (song.getCommentCount() == null) {
+                song.setCommentCount(0);
+            }
+            if (song.getCollectCount() == null) {
+                song.setCollectCount(0);
+            }
+            
             boolean result = songService.save(song);
             if (result) {
                 return ResponseDTO.success("添加成功");
@@ -53,11 +66,77 @@ public class SongController {
     }
 
     /**
+     * 用户上传歌曲
+     */
+    @PostMapping("/upload-song")
+    public ResponseDTO uploadSong(@RequestBody Song song) {
+        try {
+            if (song.getUploaderId() == null) {
+                return ResponseDTO.paramError("上传者ID不能为空");
+            }
+            
+            // 设置默认值
+            if (song.getPlayCount() == null) {
+                song.setPlayCount(0);
+            }
+            if (song.getCommentCount() == null) {
+                song.setCommentCount(0);
+            }
+            if (song.getCollectCount() == null) {
+                song.setCollectCount(0);
+            }
+            
+            boolean result = songService.save(song);
+            if (result) {
+                return ResponseDTO.success("上传成功", song);
+            } else {
+                return ResponseDTO.error("上传失败");
+            }
+        } catch (Exception e) {
+            return ResponseDTO.error(e.getMessage());
+        }
+    }
+
+    /**
      * 更新歌曲信息
      */
     @PutMapping
     public ResponseDTO updateSong(@RequestBody Song song) {
         try {
+            boolean result = songService.updateById(song);
+            if (result) {
+                return ResponseDTO.success("更新成功");
+            } else {
+                return ResponseDTO.error("更新失败");
+            }
+        } catch (Exception e) {
+            return ResponseDTO.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 用户更新自己上传的歌曲
+     */
+    @PutMapping("/user/{id}")
+    public ResponseDTO updateUserSong(
+            @PathVariable Long id,
+            @RequestBody Song song,
+            @RequestParam Long userId) {
+        try {
+            // 验证歌曲是否是该用户上传的
+            Song existingSong = songService.getById(id);
+            if (existingSong == null) {
+                return ResponseDTO.error("歌曲不存在");
+            }
+            if (existingSong.getUploaderId() == null || !existingSong.getUploaderId().equals(userId)) {
+                return ResponseDTO.forbidden();
+            }
+            
+            song.setId(id);
+            // 保留原有的上传者信息
+            song.setUploaderId(existingSong.getUploaderId());
+            song.setUploaderName(existingSong.getUploaderName());
+            
             boolean result = songService.updateById(song);
             if (result) {
                 return ResponseDTO.success("更新成功");
@@ -87,6 +166,32 @@ public class SongController {
     }
 
     /**
+     * 用户删除自己上传的歌曲
+     */
+    @DeleteMapping("/user/{id}")
+    public ResponseDTO deleteUserSong(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            // 验证歌曲是否是该用户上传的
+            Song existingSong = songService.getById(id);
+            if (existingSong == null) {
+                return ResponseDTO.error("歌曲不存在");
+            }
+            if (existingSong.getUploaderId() == null || !existingSong.getUploaderId().equals(userId)) {
+                return ResponseDTO.forbidden();
+            }
+            
+            boolean result = songService.removeById(id);
+            if (result) {
+                return ResponseDTO.success("删除成功");
+            } else {
+                return ResponseDTO.error("删除失败");
+            }
+        } catch (Exception e) {
+            return ResponseDTO.error(e.getMessage());
+        }
+    }
+
+    /**
      * 分页查询歌曲列表
      */
     @GetMapping("/page")
@@ -98,6 +203,22 @@ public class SongController {
         try {
             Page<Song> page = songService.getSongPage(current, size, name, singerId);
             return ResponseDTO.success(page);
+        } catch (Exception e) {
+            return ResponseDTO.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 查询用户上传的歌曲
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseDTO getUserSongs(@PathVariable Long userId) {
+        try {
+            QueryWrapper<Song> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("uploader_id", userId);
+            queryWrapper.orderByDesc("create_time");
+            List<Song> songs = songService.list(queryWrapper);
+            return ResponseDTO.success(songs);
         } catch (Exception e) {
             return ResponseDTO.error(e.getMessage());
         }
