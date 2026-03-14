@@ -39,3 +39,15 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime environment (portable installations)
+# Keep scripts but exclude downloaded binaries
+runtime/jdk/
+runtime/nodejs/
+runtime/maven/
+runtime/mysql/
+runtime/*.zip
+runtime/*.tar.gz
+
+# Uploads directory
+uploads/
