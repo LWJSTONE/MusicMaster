@@ -46,6 +46,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- H2 Database (内嵌数据库，便携式部署) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- MyBatis Plus -->
         <dependency>
             <groupId>com.baomidou</groupId>
