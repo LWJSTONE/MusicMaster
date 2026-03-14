@@ -156,46 +156,12 @@ ALTER TABLE `song` ADD COLUMN `uploader_name` varchar(50) DEFAULT NULL COMMENT '
 ALTER TABLE `song` ADD INDEX `idx_uploader_id` (`uploader_id`);
 
 -- =====================================
--- 初始化测试数据
+-- 初始化数据
 -- =====================================
 
--- 插入管理员用户（密码：admin123）
+-- 插入管理员用户（密码：123456）
 INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `phone`, `avatar`, `role`, `status`) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 'admin@musicmaster.com', '13800138000', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 1, 1),
-('testuser', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '测试用户', 'test@musicmaster.com', '13800138001', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 0, 1);
-
--- 插入测试歌手数据
-INSERT INTO `singer` (`name`, `sex`, `birth`, `location`, `introduction`, `pic`) VALUES
-('周杰伦', 1, '1979-01-18', '台湾', '华语流行乐坛天王级人物', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg'),
-('林俊杰', 1, '1981-03-27', '新加坡', '华语流行乐坛著名男歌手', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg'),
-('Taylor Swift', 0, '1989-12-13', '美国', '美国著名流行音乐歌手', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg');
-
--- 插入测试歌曲数据（使用 SoundHelix 免费音乐）
-INSERT INTO `song` (`name`, `singer_id`, `singer_name`, `album`, `style`, `language`, `url`, `pic`, `duration`, `play_count`, `comment_count`, `collect_count`) VALUES
-('钢琴旋律', 1, 'SoundHelix', 'SoundHelix Collection', '古典', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', 'https://picsum.photos/200?random=1', 373, 100000, 500, 200),
-('摇滚吉他', 1, 'SoundHelix', 'SoundHelix Rock', '摇滚', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', 'https://picsum.photos/200?random=2', 295, 90000, 450, 180),
-('电子节拍', 2, 'Electronic Waves', 'Electronic Waves Vol.1', '电子', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', 'https://picsum.photos/200?random=3', 420, 80000, 400, 150),
-('梦幻氛围', 3, 'Piano Dreams', 'Piano Dreams', '氛围', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', 'https://picsum.photos/200?random=4', 335, 60000, 300, 120),
-('爵士钢琴', 3, 'Piano Dreams', 'Jazz Collection', '爵士', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3', 'https://picsum.photos/200?random=5', 267, 70000, 350, 140),
-('古典弦乐', 3, 'Piano Dreams', 'Classical Strings', '古典', '纯音乐', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3', 'https://picsum.photos/200?random=6', 272, 50000, 250, 100);
-
--- 插入测试歌单数据
-INSERT INTO `song_list` (`title`, `pic`, `introduction`, `style`, `creator_id`, `creator_name`, `collect_count`, `play_count`, `song_count`) VALUES
-('华语流行经典', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', '精选华语流行音乐经典曲目', '流行', 2, 'testuser', 500, 20000, 10),
-('欧美流行热榜', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', '最新欧美流行音乐排行榜', '流行', 2, 'testuser', 300, 15000, 8),
-('深夜治愈系', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', '适合深夜聆听的治愈音乐', '轻音乐', 2, 'testuser', 400, 18000, 12);
-
--- 插入测试评论数据
-INSERT INTO `comment` (`user_id`, `username`, `avatar`, `song_id`, `song_list_id`, `type`, `content`, `up`) VALUES
-(2, 'testuser', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 1, NULL, 0, '这首歌真的很好听！', 10),
-(2, 'testuser', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', NULL, 1, 1, '这个歌单很棒，收藏了！', 8),
-(1, 'admin', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 1, NULL, 0, '经典老歌，回味无穷', 15);
-
--- 插入测试收藏数据
-INSERT INTO `collect` (`user_id`, `song_list_id`) VALUES
-(2, 1),
-(2, 2),
-(1, 1);
+('admin', '$2a$10$EqKHNa0s0Y/bnvQDnhOvq.J7XVTvH0y3OjBvVZPhYw0LMKvMqK9eG', '系统管理员', 'admin@musicmaster.com', '13800138000', 'https://p1.music.126.net/SUeqj8xv8hJY-_0pAe5mRA==/109951165696893946.jpg', 1, 1);
 
 -- =====================================
 -- 数据初始化完成
