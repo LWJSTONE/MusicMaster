@@ -1,6 +1,6 @@
 # =====================================================
 # MusicMaster 便携式配置文件
-# 使用内嵌H2数据库，无需安装MySQL
+# 使用便携式MySQL数据库
 # =====================================================
 
 server:
@@ -12,12 +12,13 @@ spring:
   application:
     name: musicmaster
 
-  # H2内嵌数据库配置
+  # MySQL数据库配置
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:./data/musicmaster;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
-    username: sa
-    password:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:13306/musicmaster?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
     druid:
       initial-size: 5
       min-idle: 5
@@ -29,23 +30,10 @@ spring:
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
-      # 禁用wall filter以支持H2
-      filters: stat
-
-  # H2控制台配置（开发调试用）
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
-
-  # 初始化数据库
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:sql/schema-h2.sql
-      data-locations: classpath:sql/data-h2.sql
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
 
   # 文件上传配置
   servlet:

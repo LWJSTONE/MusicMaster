@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("t_user")
+@TableName("user")
 public class User {
 
     @TableId(value = "id", type = IdType.AUTO)
