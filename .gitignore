@@ -1,7 +1,6 @@
 # Java
 *.class
-# Only exclude project built jars, not runtime JDK jars
-backend/target/*.jar
+*.jar
 *.war
 *.ear
 target/
@@ -26,12 +25,11 @@ mvnw.cmd
 .classpath
 
 # Node
-# Only exclude frontend node_modules, not runtime
-frontend/node_modules/
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-frontend/dist/
+dist/
 .DS_Store
 
 # Logs
@@ -41,14 +39,3 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
-
-# Runtime environment (portable installations)
-# Include portable binaries for one-click startup
-runtime/*.zip
-runtime/*.tar.gz
-
-# Uploads directory
-uploads/
-
-# MySQL password config (contains sensitive data)
-mysql_config.ini

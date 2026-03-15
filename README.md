@@ -115,7 +115,7 @@ npm run serve
 - 使用 SoundHelix 免费音乐作为测试数据
 - 添加 6 首可实际播放的测试音乐
 - 更新歌手和歌单数据
-- 测试账号：admin / 123456
+- 测试账号：admin / admin123
 
 **修改文件**：`backend/src/main/resources/sql/init.sql`
 
