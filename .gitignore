@@ -1,6 +1,7 @@
 # Java
 *.class
-*.jar
+# Only exclude project built jars, not runtime JDK jars
+backend/target/*.jar
 *.war
 *.ear
 target/
