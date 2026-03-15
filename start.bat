@@ -3,6 +3,7 @@ REM =====================================================
 REM MusicMaster - One-Click Startup Script
 REM ANSI/GBK Encoding Compatible
 REM Portable Environment - No System Impact
+REM Auto MySQL Setup
 REM =====================================================
 
 setlocal enabledelayedexpansion
@@ -31,28 +32,35 @@ set "MYSQL_DIR=%RUNTIME_DIR%\mysql"
 set "BACKEND_DIR=%PROJECT_ROOT%backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%frontend"
 
+:: MySQL settings
+set MYSQL_HOST=localhost
+set MYSQL_PORT=3306
+set MYSQL_USER=root
+set MYSQL_PASSWORD=root
+set DB_NAME=musicmaster
+
 :: ============ Display Menu ============
 :MENU
+cls
 echo.
-echo ==================================================================
-echo   Please select an option:
-echo ==================================================================
+echo +================================================================+
+echo :    M U S I C M A S T E R   -   Main Menu                       :
+echo +================================================================+
 echo.
-echo   [1] Start System (Recommended)
-echo   [2] Initialize Database
-echo   [3] Stop All Services
-echo   [4] View Help
+echo   [1] One-Click Start (Auto Setup Everything)
+echo   [2] Stop All Services
+echo   [3] View Help
 echo   [0] Exit
 echo.
-set /p CHOICE="Enter option (0-4): "
+set /p CHOICE="Enter option (0-3): "
 
 if "%CHOICE%"=="1" goto START_ALL
-if "%CHOICE%"=="2" goto INIT_DB
-if "%CHOICE%"=="3" goto STOP_ALL
-if "%CHOICE%"=="4" goto HELP
+if "%CHOICE%"=="2" goto STOP_ALL
+if "%CHOICE%"=="3" goto HELP
 if "%CHOICE%"=="0" goto END
 echo.
 echo Invalid option, please try again!
+timeout /t 2 /nobreak >nul
 goto MENU
 
 :: ============ Start All ============
@@ -60,23 +68,22 @@ goto MENU
 cls
 echo.
 echo ==================================================================
-echo   Starting MusicMaster System
+echo   Starting MusicMaster System (Auto Setup)
 echo ==================================================================
 
-:: Step 1: Check environment
+:: Step 1: Check runtime environment
 echo.
-echo [Step 1/6] Checking runtime environment...
+echo [Step 1/7] Checking runtime environment...
 echo ------------------------------------------------------------------
 
-:: Check JDK (use local environment variables, no system impact)
+:: Check JDK
 if exist "%JDK_DIR%\bin\java.exe" (
     set "JAVA_HOME=%JDK_DIR%"
     set "LOCAL_PATH=%JDK_DIR%\bin"
     echo [OK] JDK is ready
 ) else (
     echo [X] JDK not found!
-    echo     Please extract JDK 8 to: %JDK_DIR%
-    echo     Download: https://adoptium.net/temurin/releases/?version=8
+    echo     Expected: %JDK_DIR%\bin\java.exe
     pause
     goto MENU
 )
@@ -87,8 +94,7 @@ if exist "%NODE_DIR%\node.exe" (
     echo [OK] Node.js is ready
 ) else (
     echo [X] Node.js not found!
-    echo     Please extract Node.js 18 to: %NODE_DIR%
-    echo     Download: https://nodejs.org/
+    echo     Expected: %NODE_DIR%\node.exe
     pause
     goto MENU
 )
@@ -100,56 +106,149 @@ if exist "%MAVEN_DIR%\bin\mvn.cmd" (
     echo [OK] Maven is ready
 ) else (
     echo [X] Maven not found!
-    echo     Please extract Maven to: %MAVEN_DIR%
-    echo     Download: https://maven.apache.org/download.cgi
+    echo     Expected: %MAVEN_DIR%\bin\mvn.cmd
     pause
     goto MENU
 )
 
-:: Step 2: Check MySQL
+:: Step 2: Setup MySQL
 echo.
-echo [Step 2/6] Checking database connection...
+echo [Step 2/7] Setting up MySQL...
 echo ------------------------------------------------------------------
 
-:: Check if MySQL is running
-tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
-if errorlevel 1 (
-    echo [!] MySQL is not running
-
-    :: Check for portable MySQL
-    if exist "%MYSQL_DIR%\bin\mysqld.exe" (
-        echo [i] Portable MySQL detected, starting...
-        start "MySQL Server" "%MYSQL_DIR%\bin\mysqld.exe" --console
-        echo Waiting for MySQL to start...
-        timeout /t 8 /nobreak >nul
-    ) else (
-        echo [!] Please ensure MySQL service is running
-        echo     Or extract MySQL to: %MYSQL_DIR%
-        echo.
-        set /p MYSQL_CONFIRM="Is MySQL running at another location? (Y/N): "
-        if /i not "!MYSQL_CONFIRM!"=="Y" (
+:: Check for portable MySQL
+if exist "%MYSQL_DIR%\bin\mysqld.exe" (
+    echo [i] Portable MySQL detected
+    
+    :: Check if MySQL is already running
+    tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
+    if not errorlevel 1 (
+        echo [OK] MySQL is already running
+        goto :MYSQL_READY
+    )
+    
+    :: Check if data directory exists
+    if not exist "%MYSQL_DIR%\data" (
+        echo [i] Initializing MySQL data directory...
+        cd /d "%MYSQL_DIR%"
+        
+        :: Create my.ini config file
+        echo [mysqld] > my.ini
+        echo port=%MYSQL_PORT% >> my.ini
+        echo basedir=%MYSQL_DIR%>> my.ini
+        echo datadir=%MYSQL_DIR%\data >> my.ini
+        echo character-set-server=utf8mb4 >> my.ini
+        echo collation-server=utf8mb4_unicode_ci >> my.ini
+        echo default-storage-engine=INNODB >> my.ini
+        echo max_connections=200 >> my.ini
+        echo. >> my.ini
+        echo [client] >> my.ini
+        echo port=%MYSQL_PORT% >> my.ini
+        echo default-character-set=utf8mb4 >> my.ini
+        
+        :: Initialize data directory (no password)
+        "%MYSQL_DIR%\bin\mysqld.exe" --initialize-insecure --console 2>nul
+        if errorlevel 1 (
+            echo [X] MySQL initialization failed!
+            echo     Try running as administrator.
             pause
             goto MENU
         )
+        echo [OK] MySQL data directory initialized
     )
+    
+    :: Start MySQL
+    echo [i] Starting MySQL service...
+    start "MySQL Server" /min "%MYSQL_DIR%\bin\mysqld.exe"
+    
+    :: Wait for MySQL to start
+    echo [i] Waiting for MySQL to start...
+    timeout /t 5 /nobreak >nul
+    
+    :: Check if MySQL started successfully
+    :WAIT_MYSQL
+    tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
+    if errorlevel 1 (
+        timeout /t 2 /nobreak >nul
+        goto :WAIT_MYSQL
+    )
+    echo [OK] MySQL started
+    
+    :: Set root password if not set
+    echo [i] Setting root password...
+    "%MYSQL_DIR%\bin\mysql.exe" -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '%MYSQL_PASSWORD%'; FLUSH PRIVILEGES;" 2>nul
+    echo [OK] MySQL password configured
+    
 ) else (
-    echo [OK] MySQL is running
+    :: Check if system MySQL is running
+    tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
+    if errorlevel 1 (
+        echo [X] MySQL not found!
+        echo     Please install MySQL or extract portable version to:
+        echo     %MYSQL_DIR%
+        echo.
+        echo     Download: https://dev.mysql.com/downloads/mysql/
+        echo     (Select "Windows (x86, 64-bit), ZIP Archive")
+        pause
+        goto MENU
+    )
+    echo [OK] System MySQL is running
 )
 
-:: Step 3: Install frontend dependencies
+:MYSQL_READY
+echo [OK] MySQL is ready
+
+:: Step 3: Initialize database
 echo.
-echo [Step 3/6] Checking frontend dependencies...
+echo [Step 3/7] Checking database...
+echo ------------------------------------------------------------------
+
+:: Set MySQL command
+if exist "%MYSQL_DIR%\bin\mysql.exe" (
+    set "MYSQL_CMD=%MYSQL_DIR%\bin\mysql.exe"
+) else (
+    set "MYSQL_CMD=mysql"
+)
+
+:: Check if database exists
+"%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "USE %DB_NAME%;" >nul 2>&1
+if errorlevel 1 (
+    echo [i] Database not found, initializing...
+    
+    :: Import SQL file
+    set "SQL_FILE=%PROJECT_ROOT%backend\src\main\resources\sql\init.sql"
+    if exist "%SQL_FILE%" (
+        "%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%SQL_FILE%" 2>nul
+        if errorlevel 1 (
+            echo [X] Database initialization failed!
+            echo     Please check MySQL connection.
+            pause
+            goto MENU
+        )
+        echo [OK] Database initialized
+    ) else (
+        echo [X] SQL file not found: %SQL_FILE%
+        pause
+        goto MENU
+    )
+) else (
+    echo [OK] Database already exists
+)
+
+:: Step 4: Install frontend dependencies
+echo.
+echo [Step 4/7] Checking frontend dependencies...
 echo ------------------------------------------------------------------
 cd /d "%FRONTEND_DIR%"
 
 if exist "node_modules" (
     echo [OK] Frontend dependencies installed
 ) else (
-    echo Installing frontend dependencies...
-    echo Using Taobao mirror for faster download...
+    echo [i] Installing frontend dependencies...
+    echo     Using Taobao mirror for faster download...
     set "PATH=%LOCAL_PATH%;%PATH%"
-    call npm config set registry https://registry.npmmirror.com
-    call npm install
+    call npm config set registry https://registry.npmmirror.com >nul 2>&1
+    call npm install >nul 2>&1
     if errorlevel 1 (
         echo [X] Frontend dependency installation failed!
         pause
@@ -158,19 +257,19 @@ if exist "node_modules" (
     echo [OK] Frontend dependencies installed
 )
 
-:: Step 4: Build backend
+:: Step 5: Build backend
 echo.
-echo [Step 4/6] Building backend project...
+echo [Step 5/7] Building backend project...
 echo ------------------------------------------------------------------
 cd /d "%BACKEND_DIR%"
 
 if exist "target\musicmaster-backend-1.0.0.jar" (
     echo [OK] Backend already built
 ) else (
-    echo First run, building backend project...
-    echo This may take a few minutes, please wait...
+    echo [i] Building backend project...
+    echo     This may take a few minutes, please wait...
     set "PATH=%LOCAL_PATH%;%PATH%"
-    call "%MAVEN_DIR%\bin\mvn.cmd" clean package -DskipTests -q
+    call "%MAVEN_DIR%\bin\mvn.cmd" clean package -DskipTests -q >nul 2>&1
     if errorlevel 1 (
         echo [X] Backend build failed!
         pause
@@ -179,26 +278,36 @@ if exist "target\musicmaster-backend-1.0.0.jar" (
     echo [OK] Backend build complete
 )
 
-:: Step 5: Start backend
+:: Step 6: Start backend
 echo.
-echo [Step 5/6] Starting backend service...
+echo [Step 6/7] Starting backend service...
 echo ------------------------------------------------------------------
 cd /d "%BACKEND_DIR%"
+
+:: Kill existing java processes (from previous runs)
+taskkill /f /im java.exe >nul 2>&1
+timeout /t 1 /nobreak >nul
+
 start "MusicMaster Backend" cmd /c ""%JDK_DIR%\bin\java.exe" -jar target\musicmaster-backend-1.0.0.jar"
 echo [OK] Backend service starting... (Port: 8080)
-echo Waiting for backend service...
-timeout /t 12 /nobreak >nul
-
-:: Step 6: Start frontend
-echo.
-echo [Step 6/6] Starting frontend service...
-echo ------------------------------------------------------------------
-cd /d "%FRONTEND_DIR%"
-start "MusicMaster Frontend" cmd /c ""%NODE_DIR%\node.exe" node_modules\@vue\cli-service\bin\vue-cli-service.js serve --port 8081"
-echo [OK] Frontend service starting... (Port: 8081)
-echo Waiting for frontend service...
+echo [i] Waiting for backend service to be ready...
 timeout /t 15 /nobreak >nul
 
+:: Step 7: Start frontend
+echo.
+echo [Step 7/7] Starting frontend service...
+echo ------------------------------------------------------------------
+cd /d "%FRONTEND_DIR%"
+
+:: Kill existing node processes (from previous runs)
+taskkill /f /fi "WINDOWTITLE eq MusicMaster Frontend*" >nul 2>&1
+
+start "MusicMaster Frontend" cmd /c ""%NODE_DIR%\node.exe" node_modules\@vue\cli-service\bin\vue-cli-service.js serve --port 8081"
+echo [OK] Frontend service starting... (Port: 8081)
+echo [i] Waiting for frontend service...
+timeout /t 10 /nobreak >nul
+
+:: Success message
 echo.
 echo +================================================================+
 echo :                                                                :
@@ -209,117 +318,19 @@ echo.
 echo   Frontend URL: http://localhost:8081
 echo   Backend API:  http://localhost:8080/api
 echo.
-echo   Default Admin Account: admin
-echo   Default Password:      admin123
+echo   Default Admin: admin
+echo   Default Password: admin123
 echo.
 
 :: Open browser
-echo Opening browser...
+echo [i] Opening browser...
 timeout /t 3 /nobreak >nul
 start http://localhost:8081
 
 echo.
 echo System started successfully!
 echo Closing this window will not affect running services.
-echo To stop services, select menu option [3] or close backend/frontend windows.
-echo.
-pause
-goto MENU
-
-:: ============ Initialize Database ============
-:INIT_DB
-cls
-echo.
-echo ==================================================================
-echo   Initialize Database
-echo ==================================================================
-echo.
-echo This tool will help you initialize the MySQL database.
-echo.
-
-:: Set MySQL connection info
-set MYSQL_HOST=localhost
-set MYSQL_PORT=3306
-set MYSQL_USER=root
-set MYSQL_PASSWORD=root
-set DB_NAME=musicmaster
-
-echo Current database configuration:
-echo   Host: %MYSQL_HOST%:%MYSQL_PORT%
-echo   User: %MYSQL_USER%
-echo   Password: %MYSQL_PASSWORD%
-echo   Database: %DB_NAME%
-echo.
-
-set /p CONFIRM="Confirm configuration is correct? (Y/N): "
-if /i not "%CONFIRM%"=="Y" (
-    echo.
-    echo Please edit this script to modify database configuration.
-    pause
-    goto MENU
-)
-
-echo.
-echo [Step 1/2] Testing MySQL connection...
-echo.
-
-:: Check for portable MySQL
-if exist "%MYSQL_DIR%\bin\mysql.exe" (
-    set "MYSQL_CMD=%MYSQL_DIR%\bin\mysql.exe"
-    echo Using built-in MySQL command line tool
-) else (
-    set "MYSQL_CMD=mysql"
-    echo Using system MySQL command line tool
-)
-
-:: Test MySQL connection
-"%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
-if errorlevel 1 (
-    echo [X] MySQL connection failed!
-    echo.
-    echo Please check:
-    echo 1. Is MySQL service running?
-    echo 2. Are username and password correct?
-    echo 3. Does MySQL allow local connections?
-    echo.
-    pause
-    goto MENU
-)
-
-echo [OK] MySQL connection successful
-
-echo.
-echo [Step 2/2] Importing database structure...
-echo.
-
-:: Execute SQL file
-set "SQL_FILE=%PROJECT_ROOT%backend\src\main\resources\sql\init.sql"
-
-if not exist "%SQL_FILE%" (
-    echo [X] SQL file not found: %SQL_FILE%
-    pause
-    goto MENU
-)
-
-echo Importing: %SQL_FILE%
-echo.
-
-"%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%SQL_FILE%"
-
-if errorlevel 1 (
-    echo [X] Database import failed!
-    pause
-    goto MENU
-)
-
-echo.
-echo +================================================================+
-echo :             Database initialization complete!                   :
-echo +================================================================+
-echo.
-echo   Database: musicmaster
-echo   Admin account: admin
-echo   Admin password: admin123 (encrypted in database)
+echo To stop services, select menu option [2].
 echo.
 pause
 goto MENU
@@ -329,31 +340,32 @@ goto MENU
 cls
 echo.
 echo ==================================================================
-echo   Stop All Services
+echo   Stopping All Services
 echo ==================================================================
 echo.
-echo Stopping backend service (Java)...
+
+echo Stopping backend (Java)...
 taskkill /f /im java.exe 2>nul
 if errorlevel 1 (
-    echo     No running backend service found
+    echo     No running backend found
 ) else (
-    echo     Backend service stopped
+    echo     Backend stopped
 )
 
-echo Stopping frontend service (Node.js)...
+echo Stopping frontend (Node.js)...
 taskkill /f /im node.exe 2>nul
 if errorlevel 1 (
-    echo     No running frontend service found
+    echo     No running frontend found
 ) else (
-    echo     Frontend service stopped
+    echo     Frontend stopped
 )
 
-echo Stopping MySQL service...
+echo Stopping MySQL...
 taskkill /f /im mysqld.exe 2>nul
 if errorlevel 1 (
-    echo     No running MySQL service found
+    echo     No running MySQL found
 ) else (
-    echo     MySQL service stopped
+    echo     MySQL stopped
 )
 
 echo.
@@ -372,42 +384,30 @@ echo ==================================================================
 echo   MusicMaster Help
 echo ==================================================================
 echo.
-echo  [Quick Start]
-echo   1. First time setup:
-echo      - Extract JDK 8 to: runtime/jdk/
-echo      - Extract Node.js 18 to: runtime/nodejs/
-echo      - Extract Maven to: runtime/maven/
-echo      - Extract MySQL to: runtime/mysql/ (optional)
-echo.
-echo   2. Download links:
-echo      - JDK 8:    https://adoptium.net/temurin/releases/?version=8
-echo      - Node.js:  https://nodejs.org/
-echo      - Maven:    https://maven.apache.org/download.cgi
-echo      - MySQL:    https://dev.mysql.com/downloads/mysql/
-echo.
-echo   3. Run steps:
-echo      - Select [2] Initialize Database
-echo      - Select [1] Start System
+echo  [One-Click Start]
+echo   Just select option [1] and the system will:
+echo   - Start MySQL (or initialize if first run)
+echo   - Create database and import data
+echo   - Build and start backend
+echo   - Install dependencies and start frontend
+echo   - Open browser automatically
 echo.
 echo  [System Requirements]
 echo   - Windows 10/11 (64-bit)
-echo   - At least 4GB available memory
-echo   - At least 2GB available disk space
+echo   - 4GB+ RAM
+echo   - 2GB+ disk space
 echo.
 echo  [Port Usage]
 echo   - Frontend: 8081
 echo   - Backend:  8080
 echo   - MySQL:    3306
-echo   If ports are occupied, close conflicting programs or modify config.
 echo.
 echo  [Default Account]
-echo   - Admin: admin / admin123
-echo   - Please change password after login.
+echo   - Username: admin
+echo   - Password: admin123
 echo.
 echo  [Environment Isolation]
-echo   This script uses portable runtime environment.
-echo   It does NOT modify system environment variables.
-echo   All environment variables are only valid during script execution.
+echo   Uses portable runtime, no system changes.
 echo.
 echo ==================================================================
 echo.
@@ -419,5 +419,5 @@ goto MENU
 echo.
 echo Thank you for using MusicMaster!
 echo.
-timeout /t 2 /nobreak >nul
+timeout /t 1 /nobreak >nul
 exit /b 0
