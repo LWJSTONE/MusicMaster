@@ -1,12 +1,20 @@
 @echo off
-chcp 65001 >nul
+REM =====================================================
+REM MusicMaster 数据库初始化工具
+REM ANSI编码兼容，纯ASCII字符
+REM =====================================================
+
 echo.
-echo ╔══════════════════════════════════════════════════════╗
-echo ║       MusicMaster 数据库初始化工具                     ║
-echo ╚══════════════════════════════════════════════════════╝
+echo ==================================================================
+echo       MusicMaster 数据库初始化工具
+echo ==================================================================
 echo.
 echo 此工具将帮助您初始化 MySQL 数据库
 echo.
+
+:: 获取项目根目录
+set "PROJECT_ROOT=%~dp0"
+set "MYSQL_DIR=%PROJECT_ROOT%runtime\mysql"
 
 :: 设置MySQL连接信息
 set MYSQL_HOST=localhost
@@ -34,8 +42,17 @@ echo.
 echo [步骤 1/2] 测试 MySQL 连接...
 echo.
 
+:: 检查是否有便携版MySQL
+if exist "%MYSQL_DIR%\bin\mysql.exe" (
+    set "MYSQL_CMD=%MYSQL_DIR%\bin\mysql.exe"
+    echo 使用内置 MySQL 命令行工具
+) else (
+    set "MYSQL_CMD=mysql"
+    echo 使用系统 MySQL 命令行工具
+)
+
 :: 测试MySQL连接
-mysql -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
+"%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
 if errorlevel 1 (
     echo [X] MySQL 连接失败!
     echo.
@@ -55,7 +72,7 @@ echo [步骤 2/2] 导入数据库结构...
 echo.
 
 :: 执行SQL文件
-set "SQL_FILE=%~dp0backend\src\main\resources\sql\init.sql"
+set "SQL_FILE=%PROJECT_ROOT%backend\src\main\resources\sql\init.sql"
 
 if not exist "%SQL_FILE%" (
     echo [X] SQL文件不存在: %SQL_FILE%
@@ -66,7 +83,7 @@ if not exist "%SQL_FILE%" (
 echo 正在导入: %SQL_FILE%
 echo.
 
-mysql -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%SQL_FILE%"
+"%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%SQL_FILE%"
 
 if errorlevel 1 (
     echo [X] 数据库导入失败!
@@ -75,12 +92,12 @@ if errorlevel 1 (
 )
 
 echo.
-echo ╔══════════════════════════════════════════════════════╗
-echo ║             数据库初始化完成!                         ║
-echo ╠══════════════════════════════════════════════════════╣
-echo ║  数据库名: musicmaster                                ║
-echo ║  管理员账号: admin                                    ║
-echo ║  管理员密码: admin123 (数据库中加密存储)              ║
-echo ╚══════════════════════════════════════════════════════╝
+echo +================================================================+
+echo :             数据库初始化完成!                                   :
+echo +================================================================+
+echo.
+echo   数据库名: musicmaster
+echo   管理员账号: admin
+echo   管理员密码: admin123 (数据库中加密存储)
 echo.
 pause
