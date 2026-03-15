@@ -39,6 +39,13 @@
                 <div class="song-meta">{{ song.album }} · {{ song.style }} · {{ formatTime(song.duration) }}</div>
               </div>
               <div class="song-actions">
+                <el-button 
+                  size="mini" 
+                  :type="collectedSongs.includes(song.id) ? 'danger' : 'default'"
+                  :icon="collectedSongs.includes(song.id) ? 'el-icon-star-on' : 'el-icon-star-off'"
+                  @click.stop="toggleSongCollect(song)"
+                  circle>
+                </el-button>
                 <el-button size="mini" :icon="currentSong && currentSong.id === song.id && isPlaying ? 'el-icon-video-pause' : 'el-icon-video-play'" circle @click.stop="playSong(song, index)"></el-button>
               </div>
             </div>
@@ -232,6 +239,7 @@ export default {
       newComment: '',
       // 收藏相关
       collectedSongLists: [],
+      collectedSongs: [],
       // 上传相关
       uploadDialogVisible: false,
       uploading: false,
@@ -294,6 +302,7 @@ export default {
 
         // 加载用户收藏状态
         this.loadCollectedSongLists()
+        this.loadCollectedSongs()
       } catch (error) {
         this.$message.error('数据加载失败')
         console.error(error)
@@ -339,15 +348,96 @@ export default {
         params: {
           current: 1,
           size: 100,
-          userId: user.id
+          userId: user.id,
+          type: 0
         }
       }).then(res => {
         if (res.data.code === 200) {
           this.collectedSongLists = res.data.data.records.map(item => item.songListId)
         }
       }).catch(err => {
-        console.error('加载收藏状态失败:', err)
+        console.error('加载歌单收藏状态失败:', err)
       })
+    },
+
+    loadCollectedSongs() {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        return
+      }
+
+      axios.get('/api/collect/page', {
+        params: {
+          current: 1,
+          size: 500,
+          userId: user.id,
+          type: 1
+        }
+      }).then(res => {
+        if (res.data.code === 200) {
+          this.collectedSongs = res.data.data.records.map(item => item.songId)
+        }
+      }).catch(err => {
+        console.error('加载歌曲收藏状态失败:', err)
+      })
+    },
+
+    toggleSongCollect(song) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        this.$message.error('请先登录')
+        return
+      }
+
+      const isCollected = this.collectedSongs.includes(song.id)
+
+      if (isCollected) {
+        // 取消收藏
+        this.$confirm('确定要取消收藏该歌曲吗?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          axios.delete('/api/collect/song', {
+            params: {
+              userId: user.id,
+              songId: song.id
+            }
+          }).then(res => {
+            if (res.data.code === 200) {
+              this.$message.success('取消收藏成功')
+              // 更新收藏状态
+              this.collectedSongs = this.collectedSongs.filter(id => id !== song.id)
+              // 更新歌曲收藏数
+              song.collectCount = Math.max(0, (song.collectCount || 0) - 1)
+            } else {
+              this.$message.error(res.data.message || '取消收藏失败')
+            }
+          }).catch(err => {
+            this.$message.error('取消收藏失败')
+            console.error(err)
+          })
+        }).catch(() => {})
+      } else {
+        // 添加收藏
+        axios.post('/api/collect/song', {
+          userId: user.id,
+          songId: song.id
+        }).then(res => {
+          if (res.data.code === 200) {
+            this.$message.success('收藏成功')
+            // 更新收藏状态
+            this.collectedSongs.push(song.id)
+            // 更新歌曲收藏数
+            song.collectCount = (song.collectCount || 0) + 1
+          } else {
+            this.$message.error(res.data.message || '收藏失败')
+          }
+        }).catch(err => {
+          this.$message.error('收藏失败')
+          console.error(err)
+        })
+      }
     },
 
     toggleCollect(songlist) {
@@ -361,12 +451,12 @@ export default {
 
       if (isCollected) {
         // 取消收藏
-        this.$confirm('确定要取消收藏吗?', '提示', {
+        this.$confirm('确定要取消收藏该歌单吗?', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         }).then(() => {
-          axios.delete('/api/collect', {
+          axios.delete('/api/collect/songlist', {
             params: {
               userId: user.id,
               songListId: songlist.id
@@ -388,7 +478,7 @@ export default {
         }).catch(() => {})
       } else {
         // 添加收藏
-        axios.post('/api/collect', {
+        axios.post('/api/collect/songlist', {
           userId: user.id,
           songListId: songlist.id
         }).then(res => {

@@ -15,15 +15,57 @@ public interface CollectService extends IService<Collect> {
      * @param size 每页条数
      * @param userId 用户ID（可选）
      * @param songListId 歌单ID（可选）
+     * @param songId 歌曲ID（可选）
+     * @param type 收藏类型（可选）
      * @return 分页结果
      */
-    Page<Collect> getCollectPage(Integer current, Integer size, Long userId, Long songListId);
+    Page<Collect> getCollectPage(Integer current, Integer size, Long userId, Long songListId, Long songId, Integer type);
 
     /**
-     * 检查是否已收藏
+     * 检查是否已收藏歌单
      * @param userId 用户ID
      * @param songListId 歌单ID
      * @return 是否已收藏
      */
-    boolean isCollected(Long userId, Long songListId);
+    boolean isCollectedSongList(Long userId, Long songListId);
+
+    /**
+     * 检查是否已收藏歌曲
+     * @param userId 用户ID
+     * @param songId 歌曲ID
+     * @return 是否已收藏
+     */
+    boolean isCollectedSong(Long userId, Long songId);
+
+    /**
+     * 添加歌单收藏
+     * @param userId 用户ID
+     * @param songListId 歌单ID
+     * @return 是否成功
+     */
+    boolean addSongListCollect(Long userId, Long songListId);
+
+    /**
+     * 添加歌曲收藏
+     * @param userId 用户ID
+     * @param songId 歌曲ID
+     * @return 是否成功
+     */
+    boolean addSongCollect(Long userId, Long songId);
+
+    /**
+     * 取消歌单收藏
+     * @param userId 用户ID
+     * @param songListId 歌单ID
+     * @return 是否成功
+     */
+    boolean removeSongListCollect(Long userId, Long songListId);
+
+    /**
+     * 取消歌曲收藏
+     * @param userId 用户ID
+     * @param songId 歌曲ID
+     * @return 是否成功
+     */
+    boolean removeSongCollect(Long userId, Long songId);
 }

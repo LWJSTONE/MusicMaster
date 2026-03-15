@@ -123,13 +123,18 @@ DROP TABLE IF EXISTS `collect`;
 CREATE TABLE `collect` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '收藏ID',
   `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-  `song_list_id` bigint(20) NOT NULL COMMENT '歌单ID',
+  `type` tinyint(4) DEFAULT '0' COMMENT '收藏类型：0-歌单收藏，1-歌曲收藏',
+  `song_list_id` bigint(20) DEFAULT NULL COMMENT '歌单ID（type=0时使用）',
+  `song_id` bigint(20) DEFAULT NULL COMMENT '歌曲ID（type=1时使用）',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
   `deleted` tinyint(4) DEFAULT '0' COMMENT '删除标记：0-未删除，1-已删除',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_song_list` (`user_id`, `song_list_id`),
+  UNIQUE KEY `uk_user_song_list` (`user_id`, `song_list_id`, `type`),
+  UNIQUE KEY `uk_user_song` (`user_id`, `song_id`, `type`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_song_list_id` (`song_list_id`)
+  KEY `idx_song_list_id` (`song_list_id`),
+  KEY `idx_song_id` (`song_id`),
+  KEY `idx_type` (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收藏表';
 
 -- =====================================
@@ -166,3 +171,17 @@ INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `phone`, `avata
 -- =====================================
 -- 数据初始化完成
 -- =====================================
+
+-- =====================================
+-- 数据库升级脚本（收藏表添加歌曲收藏支持）
+-- 如需升级现有数据库，请执行以下语句：
+-- =====================================
+-- ALTER TABLE `collect` ADD COLUMN `type` tinyint(4) DEFAULT '0' COMMENT '收藏类型：0-歌单收藏，1-歌曲收藏' AFTER `user_id`;
+-- ALTER TABLE `collect` ADD COLUMN `song_id` bigint(20) DEFAULT NULL COMMENT '歌曲ID（type=1时使用）' AFTER `song_list_id`;
+-- ALTER TABLE `collect` DROP INDEX `uk_user_song_list`;
+-- ALTER TABLE `collect` ADD UNIQUE KEY `uk_user_song_list` (`user_id`, `song_list_id`, `type`);
+-- ALTER TABLE `collect` ADD UNIQUE KEY `uk_user_song` (`user_id`, `song_id`, `type`);
+-- ALTER TABLE `collect` ADD INDEX `idx_song_id` (`song_id`);
+-- ALTER TABLE `collect` ADD INDEX `idx_type` (`type`);
+-- ALTER TABLE `collect` MODIFY COLUMN `song_list_id` bigint(20) DEFAULT NULL COMMENT '歌单ID（type=0时使用）';
+-- UPDATE `collect` SET `type` = 0 WHERE `type` IS NULL;

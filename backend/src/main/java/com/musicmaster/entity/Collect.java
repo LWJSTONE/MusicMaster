@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 收藏实体类（用户收藏歌单）
+ * 收藏实体类（用户收藏歌单/歌曲）
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -22,9 +22,19 @@ public class Collect {
     private Long userId;
 
     /**
-     * 歌单ID
+     * 收藏类型：0-歌单收藏，1-歌曲收藏
+     */
+    private Integer type;
+
+    /**
+     * 歌单ID（type=0时使用）
      */
     private Long songListId;
+
+    /**
+     * 歌曲ID（type=1时使用）
+     */
+    private Long songId;
 
     /**
      * 收藏时间
