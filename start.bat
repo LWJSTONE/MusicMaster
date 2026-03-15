@@ -31,6 +31,7 @@ set "CONFIG_FILE=%PROJECT_ROOT%mysql_config.ini"
 set MYSQL_PORT=3306
 set MYSQL_USER=root
 set DB_NAME=musicmaster
+set USE_PORTABLE_MYSQL=0
 
 :: ============ Display Menu ============
 :MENU
@@ -66,9 +67,18 @@ echo ==================================================================
 :: Step 1: Check runtime
 echo.
 echo [1/7] Checking runtime...
-if not exist "%JDK_DIR%\bin\java.exe" (echo [X] JDK missing! & pause & goto MENU)
-if not exist "%NODE_DIR%\node.exe" (echo [X] Node.js missing! & pause & goto MENU)
-if not exist "%MAVEN_DIR%\bin\mvn.cmd" (echo [X] Maven missing! & pause & goto MENU)
+if not exist "%JDK_DIR%\bin\java.exe" (
+    echo [X] JDK missing! Please extract JDK to: %JDK_DIR%
+    pause & goto MENU
+)
+if not exist "%NODE_DIR%\node.exe" (
+    echo [X] Node.js missing! Please extract Node.js to: %NODE_DIR%
+    pause & goto MENU
+)
+if not exist "%MAVEN_DIR%\bin\mvn.cmd" (
+    echo [X] Maven missing! Please extract Maven to: %MAVEN_DIR%
+    pause & goto MENU
+)
 echo [OK] Runtime ready
 
 :: Step 2: Setup MySQL
@@ -76,7 +86,6 @@ echo.
 echo [2/7] Setting up MySQL...
 
 :: Check for portable MySQL
-set "USE_PORTABLE_MYSQL=0"
 if exist "%MYSQL_DIR%\bin\mysqld.exe" (
     set "USE_PORTABLE_MYSQL=1"
     :: Check if running
@@ -98,7 +107,7 @@ if exist "%MYSQL_DIR%\bin\mysqld.exe" (
             echo datadir=%MYSQL_DIR%\data
             echo character-set-server=utf8mb4
             echo default-storage-engine=INNODB
-            default_authentication_plugin=mysql_native_password
+            echo default_authentication_plugin=mysql_native_password
             echo [client]
             echo port=%MYSQL_PORT%
             echo default-character-set=utf8mb4
@@ -107,7 +116,6 @@ if exist "%MYSQL_DIR%\bin\mysqld.exe" (
         :: Initialize without password
         cd /d "%MYSQL_DIR%"
         "%MYSQL_DIR%\bin\mysqld.exe" --initialize-insecure --console 2>nul
-        
         echo [OK] MySQL initialized
     )
     
@@ -133,30 +141,28 @@ if exist "%MYSQL_DIR%\bin\mysqld.exe" (
         echo [i] Setting default password for portable MySQL...
         "%MYSQL_DIR%\bin\mysql.exe" -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;" 2>nul
         echo. > "%MYSQL_DIR%\data\password_set"
-        set "MYSQL_PASSWORD=root"
         echo [OK] Password set to 'root'
     )
+    goto :MYSQL_CONNECTED
+)
+
+:: No portable MySQL - use system MySQL
+tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
+if errorlevel 1 (
+    echo [i] Trying to start system MySQL service...
+    net start MySQL80 >nul 2>&1
+    net start MySQL >nul 2>&1
+    net start MySQL57 >nul 2>&1
     
-) else (
-    :: No portable MySQL - use system MySQL
+    :: Check again
     tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
     if errorlevel 1 (
-        :: Try to start system MySQL service
-        echo [i] Trying to start system MySQL service...
-        net start MySQL80 >nul 2>&1
-        if errorlevel 1 net start MySQL >nul 2>&1
-        if errorlevel 1 net start MySQL57 >nul 2>&1
-        
-        :: Check again
-        tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
-        if errorlevel 1 (
-            echo [X] MySQL not found!
-            echo     Please install MySQL or extract portable MySQL to: %MYSQL_DIR%
-            pause & goto MENU
-        )
+        echo [X] MySQL not found!
+        echo     Please install MySQL or extract portable MySQL to: %MYSQL_DIR%
+        pause & goto MENU
     )
-    echo [OK] System MySQL running
 )
+echo [OK] System MySQL running
 
 :MYSQL_CONNECTED
 
@@ -264,7 +270,7 @@ echo.
 echo [4/7] Frontend dependencies...
 cd /d "%FRONTEND_DIR%"
 if not exist "node_modules" (
-    echo [i] Installing (please wait)...
+    echo [i] Installing npm packages, please wait...
     set "PATH=%NODE_DIR%;%PATH%"
     call npm config set registry https://registry.npmmirror.com >nul 2>&1
     call npm install >nul 2>&1
@@ -276,7 +282,7 @@ echo.
 echo [5/7] Building backend...
 cd /d "%BACKEND_DIR%"
 if not exist "target\musicmaster-backend-1.0.0.jar" (
-    echo [i] Building (please wait)...
+    echo [i] Building with Maven, please wait...
     set "PATH=%JDK_DIR%\bin;%MAVEN_DIR%\bin;%PATH%"
     call mvn clean package -DskipTests -q >nul 2>&1
 )
