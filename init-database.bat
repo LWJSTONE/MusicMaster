@@ -1,103 +1,103 @@
 @echo off
 REM =====================================================
-REM MusicMaster 数据库初始化工具
-REM ANSI编码兼容，纯ASCII字符
+REM MusicMaster Database Initialization Tool
+REM ANSI/GBK Encoding Compatible
 REM =====================================================
 
 echo.
 echo ==================================================================
-echo       MusicMaster 数据库初始化工具
+echo       MusicMaster Database Initialization Tool
 echo ==================================================================
 echo.
-echo 此工具将帮助您初始化 MySQL 数据库
+echo This tool will help you initialize the MySQL database.
 echo.
 
-:: 获取项目根目录
+:: Get project root directory
 set "PROJECT_ROOT=%~dp0"
 set "MYSQL_DIR=%PROJECT_ROOT%runtime\mysql"
 
-:: 设置MySQL连接信息
+:: Set MySQL connection info
 set MYSQL_HOST=localhost
 set MYSQL_PORT=3306
 set MYSQL_USER=root
 set MYSQL_PASSWORD=root
 set DB_NAME=musicmaster
 
-echo 当前数据库配置:
-echo   主机: %MYSQL_HOST%:%MYSQL_PORT%
-echo   用户: %MYSQL_USER%
-echo   密码: %MYSQL_PASSWORD%
-echo   数据库: %DB_NAME%
+echo Current database configuration:
+echo   Host: %MYSQL_HOST%:%MYSQL_PORT%
+echo   User: %MYSQL_USER%
+echo   Password: %MYSQL_PASSWORD%
+echo   Database: %DB_NAME%
 echo.
 
-set /p CONFIRM="确认以上配置正确? (Y/N): "
+set /p CONFIRM="Confirm configuration is correct? (Y/N): "
 if /i not "%CONFIRM%"=="Y" (
     echo.
-    echo 请手动编辑此脚本修改数据库配置
+    echo Please edit this script to modify database configuration.
     pause
     exit /b 1
 )
 
 echo.
-echo [步骤 1/2] 测试 MySQL 连接...
+echo [Step 1/2] Testing MySQL connection...
 echo.
 
-:: 检查是否有便携版MySQL
+:: Check for portable MySQL
 if exist "%MYSQL_DIR%\bin\mysql.exe" (
     set "MYSQL_CMD=%MYSQL_DIR%\bin\mysql.exe"
-    echo 使用内置 MySQL 命令行工具
+    echo Using built-in MySQL command line tool
 ) else (
     set "MYSQL_CMD=mysql"
-    echo 使用系统 MySQL 命令行工具
+    echo Using system MySQL command line tool
 )
 
-:: 测试MySQL连接
+:: Test MySQL connection
 "%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
 if errorlevel 1 (
-    echo [X] MySQL 连接失败!
+    echo [X] MySQL connection failed!
     echo.
-    echo 请检查:
-    echo 1. MySQL 服务是否已启动
-    echo 2. 用户名和密码是否正确
-    echo 3. MySQL 是否允许本地连接
+    echo Please check:
+    echo 1. Is MySQL service running?
+    echo 2. Are username and password correct?
+    echo 3. Does MySQL allow local connections?
     echo.
     pause
     exit /b 1
 )
 
-echo [OK] MySQL 连接成功
+echo [OK] MySQL connection successful
 
 echo.
-echo [步骤 2/2] 导入数据库结构...
+echo [Step 2/2] Importing database structure...
 echo.
 
-:: 执行SQL文件
+:: Execute SQL file
 set "SQL_FILE=%PROJECT_ROOT%backend\src\main\resources\sql\init.sql"
 
 if not exist "%SQL_FILE%" (
-    echo [X] SQL文件不存在: %SQL_FILE%
+    echo [X] SQL file not found: %SQL_FILE%
     pause
     exit /b 1
 )
 
-echo 正在导入: %SQL_FILE%
+echo Importing: %SQL_FILE%
 echo.
 
 "%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%SQL_FILE%"
 
 if errorlevel 1 (
-    echo [X] 数据库导入失败!
+    echo [X] Database import failed!
     pause
     exit /b 1
 )
 
 echo.
 echo +================================================================+
-echo :             数据库初始化完成!                                   :
+echo :             Database initialization complete!                   :
 echo +================================================================+
 echo.
-echo   数据库名: musicmaster
-echo   管理员账号: admin
-echo   管理员密码: admin123 (数据库中加密存储)
+echo   Database: musicmaster
+echo   Admin account: admin
+echo   Admin password: admin123 (encrypted in database)
 echo.
 pause

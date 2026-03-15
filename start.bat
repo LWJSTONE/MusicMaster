@@ -1,13 +1,13 @@
 @echo off
 REM =====================================================
-REM MusicMaster 音乐管理系统 - 一键启动脚本
-REM 使用ANSI编码兼容，纯ASCII字符
-REM 内置环境，不影响系统环境
+REM MusicMaster - One-Click Startup Script
+REM ANSI/GBK Encoding Compatible
+REM Portable Environment - No System Impact
 REM =====================================================
 
 setlocal enabledelayedexpansion
 
-title MusicMaster 音乐管理系统启动器
+title MusicMaster Launcher
 
 color 0A
 
@@ -16,12 +16,12 @@ echo +================================================================+
 echo :                                                                :
 echo :    M U S I C M A S T E R                                       :
 echo :                                                                :
-echo :    音乐管理系统 v1.0.0 - 一键启动工具                           :
+echo :    Music Management System v1.0.0                              :
 echo :                                                                :
 echo +================================================================+
 echo.
 
-:: 获取项目根目录（使用短路径避免空格问题）
+:: Get project root directory
 set "PROJECT_ROOT=%~dp0"
 set "RUNTIME_DIR=%PROJECT_ROOT%runtime"
 set "JDK_DIR=%RUNTIME_DIR%\jdk"
@@ -31,20 +31,20 @@ set "MYSQL_DIR=%RUNTIME_DIR%\mysql"
 set "BACKEND_DIR=%PROJECT_ROOT%backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%frontend"
 
-:: ============ 显示菜单 ============
+:: ============ Display Menu ============
 :MENU
 echo.
 echo ==================================================================
-echo   请选择操作:
+echo   Please select an option:
 echo ==================================================================
 echo.
-echo   [1] 一键启动系统 (推荐)
-echo   [2] 初始化数据库
-echo   [3] 停止所有服务
-echo   [4] 查看帮助文档
-echo   [0] 退出
+echo   [1] Start System (Recommended)
+echo   [2] Initialize Database
+echo   [3] Stop All Services
+echo   [4] View Help
+echo   [0] Exit
 echo.
-set /p CHOICE="请输入选项 (0-4): "
+set /p CHOICE="Enter option (0-4): "
 
 if "%CHOICE%"=="1" goto START_ALL
 if "%CHOICE%"=="2" goto INIT_DB
@@ -52,369 +52,372 @@ if "%CHOICE%"=="3" goto STOP_ALL
 if "%CHOICE%"=="4" goto HELP
 if "%CHOICE%"=="0" goto END
 echo.
-echo 无效选项，请重新选择!
+echo Invalid option, please try again!
 goto MENU
 
-:: ============ 一键启动 ============
+:: ============ Start All ============
 :START_ALL
 cls
 echo.
 echo ==================================================================
-echo   一键启动 MusicMaster 系统
+echo   Starting MusicMaster System
 echo ==================================================================
 
-:: 步骤1: 检查并设置环境
+:: Step 1: Check environment
 echo.
-echo [步骤 1/6] 检查运行环境...
+echo [Step 1/6] Checking runtime environment...
 echo ------------------------------------------------------------------
 
-:: 检查JDK (使用局部环境变量，不影响系统)
+:: Check JDK (use local environment variables, no system impact)
 if exist "%JDK_DIR%\bin\java.exe" (
     set "JAVA_HOME=%JDK_DIR%"
     set "LOCAL_PATH=%JDK_DIR%\bin"
-    echo [OK] JDK 已就绪
+    echo [OK] JDK is ready
 ) else (
-    echo [X] JDK 未安装!
-    echo     请将 JDK 8 解压到: %JDK_DIR%
-    echo     下载地址: https://adoptium.net/temurin/releases/?version=8
+    echo [X] JDK not found!
+    echo     Please extract JDK 8 to: %JDK_DIR%
+    echo     Download: https://adoptium.net/temurin/releases/?version=8
     pause
     goto MENU
 )
 
-:: 检查Node.js
+:: Check Node.js
 if exist "%NODE_DIR%\node.exe" (
     set "LOCAL_PATH=%LOCAL_PATH%;%NODE_DIR%"
-    echo [OK] Node.js 已就绪
+    echo [OK] Node.js is ready
 ) else (
-    echo [X] Node.js 未安装!
-    echo     请将 Node.js 18 解压到: %NODE_DIR%
-    echo     下载地址: https://nodejs.org/
+    echo [X] Node.js not found!
+    echo     Please extract Node.js 18 to: %NODE_DIR%
+    echo     Download: https://nodejs.org/
     pause
     goto MENU
 )
 
-:: 检查Maven
+:: Check Maven
 if exist "%MAVEN_DIR%\bin\mvn.cmd" (
     set "MAVEN_HOME=%MAVEN_DIR%"
     set "LOCAL_PATH=%LOCAL_PATH%;%MAVEN_DIR%\bin"
-    echo [OK] Maven 已就绪
+    echo [OK] Maven is ready
 ) else (
-    echo [X] Maven 未安装!
-    echo     请将 Maven 解压到: %MAVEN_DIR%
-    echo     下载地址: https://maven.apache.org/download.cgi
+    echo [X] Maven not found!
+    echo     Please extract Maven to: %MAVEN_DIR%
+    echo     Download: https://maven.apache.org/download.cgi
     pause
     goto MENU
 )
 
-:: 步骤2: 检查MySQL
+:: Step 2: Check MySQL
 echo.
-echo [步骤 2/6] 检查数据库连接...
+echo [Step 2/6] Checking database connection...
 echo ------------------------------------------------------------------
 
-:: 检查MySQL是否运行
+:: Check if MySQL is running
 tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
 if errorlevel 1 (
-    echo [!] MySQL 未运行
+    echo [!] MySQL is not running
 
-    :: 检查是否有便携版MySQL
+    :: Check for portable MySQL
     if exist "%MYSQL_DIR%\bin\mysqld.exe" (
-        echo [i] 检测到 MySQL 便携版，正在启动...
+        echo [i] Portable MySQL detected, starting...
         start "MySQL Server" "%MYSQL_DIR%\bin\mysqld.exe" --console
-        echo 等待 MySQL 启动...
+        echo Waiting for MySQL to start...
         timeout /t 8 /nobreak >nul
     ) else (
-        echo [!] 请确保 MySQL 服务已启动
-        echo     或将 MySQL 解压到: %MYSQL_DIR%
+        echo [!] Please ensure MySQL service is running
+        echo     Or extract MySQL to: %MYSQL_DIR%
         echo.
-        set /p MYSQL_CONFIRM="MySQL 是否已在其他位置运行? (Y/N): "
+        set /p MYSQL_CONFIRM="Is MySQL running at another location? (Y/N): "
         if /i not "!MYSQL_CONFIRM!"=="Y" (
             pause
             goto MENU
         )
     )
 ) else (
-    echo [OK] MySQL 已运行
+    echo [OK] MySQL is running
 )
 
-:: 步骤3: 安装前端依赖
+:: Step 3: Install frontend dependencies
 echo.
-echo [步骤 3/6] 检查前端依赖...
+echo [Step 3/6] Checking frontend dependencies...
 echo ------------------------------------------------------------------
 cd /d "%FRONTEND_DIR%"
 
 if exist "node_modules" (
-    echo [OK] 前端依赖已安装
+    echo [OK] Frontend dependencies installed
 ) else (
-    echo 正在安装前端依赖...
-    echo 使用淘宝镜像加速下载...
+    echo Installing frontend dependencies...
+    echo Using Taobao mirror for faster download...
     set "PATH=%LOCAL_PATH%;%PATH%"
     call npm config set registry https://registry.npmmirror.com
     call npm install
     if errorlevel 1 (
-        echo [X] 前端依赖安装失败!
+        echo [X] Frontend dependency installation failed!
         pause
         goto MENU
     )
-    echo [OK] 前端依赖安装完成
+    echo [OK] Frontend dependencies installed
 )
 
-:: 步骤4: 构建后端
+:: Step 4: Build backend
 echo.
-echo [步骤 4/6] 构建后端项目...
+echo [Step 4/6] Building backend project...
 echo ------------------------------------------------------------------
 cd /d "%BACKEND_DIR%"
 
 if exist "target\musicmaster-backend-1.0.0.jar" (
-    echo [OK] 后端已构建
+    echo [OK] Backend already built
 ) else (
-    echo 首次运行，正在构建后端项目...
-    echo 这可能需要几分钟，请耐心等待...
+    echo First run, building backend project...
+    echo This may take a few minutes, please wait...
     set "PATH=%LOCAL_PATH%;%PATH%"
     call "%MAVEN_DIR%\bin\mvn.cmd" clean package -DskipTests -q
     if errorlevel 1 (
-        echo [X] 后端构建失败!
+        echo [X] Backend build failed!
         pause
         goto MENU
     )
-    echo [OK] 后端构建完成
+    echo [OK] Backend build complete
 )
 
-:: 步骤5: 启动后端
+:: Step 5: Start backend
 echo.
-echo [步骤 5/6] 启动后端服务...
+echo [Step 5/6] Starting backend service...
 echo ------------------------------------------------------------------
 cd /d "%BACKEND_DIR%"
 start "MusicMaster Backend" cmd /c ""%JDK_DIR%\bin\java.exe" -jar target\musicmaster-backend-1.0.0.jar"
-echo [OK] 后端服务启动中... (端口: 8080)
-echo 等待后端服务就绪...
+echo [OK] Backend service starting... (Port: 8080)
+echo Waiting for backend service...
 timeout /t 12 /nobreak >nul
 
-:: 步骤6: 启动前端
+:: Step 6: Start frontend
 echo.
-echo [步骤 6/6] 启动前端服务...
+echo [Step 6/6] Starting frontend service...
 echo ------------------------------------------------------------------
 cd /d "%FRONTEND_DIR%"
 start "MusicMaster Frontend" cmd /c ""%NODE_DIR%\node.exe" node_modules\@vue\cli-service\bin\vue-cli-service.js serve --port 8081"
-echo [OK] 前端服务启动中... (端口: 8081)
-echo 等待前端服务就绪...
+echo [OK] Frontend service starting... (Port: 8081)
+echo Waiting for frontend service...
 timeout /t 15 /nobreak >nul
 
 echo.
 echo +================================================================+
 echo :                                                                :
-echo :                  启 动 成 功 !                                  :
+echo :              STARTUP SUCCESSFUL!                               :
 echo :                                                                :
 echo +================================================================+
 echo.
-echo   前端访问地址: http://localhost:8081
-echo   后端 API 地址: http://localhost:8080/api
+echo   Frontend URL: http://localhost:8081
+echo   Backend API:  http://localhost:8080/api
 echo.
-echo   默认管理员账号: admin
-echo   默认管理员密码: admin123
+echo   Default Admin Account: admin
+echo   Default Password:      admin123
 echo.
 
-:: 自动打开浏览器
-echo 正在打开浏览器...
+:: Open browser
+echo Opening browser...
 timeout /t 3 /nobreak >nul
 start http://localhost:8081
 
 echo.
-echo 系统已启动成功!
-echo 关闭此窗口不会影响服务运行
-echo 如需停止服务，请选择菜单选项 [3] 或关闭后端/前端窗口
+echo System started successfully!
+echo Closing this window will not affect running services.
+echo To stop services, select menu option [3] or close backend/frontend windows.
 echo.
 pause
 goto MENU
 
-:: ============ 初始化数据库 ============
+:: ============ Initialize Database ============
 :INIT_DB
 cls
 echo.
 echo ==================================================================
-echo   初始化数据库
+echo   Initialize Database
 echo ==================================================================
 echo.
-echo 此工具将帮助您初始化 MySQL 数据库
+echo This tool will help you initialize the MySQL database.
 echo.
 
-:: 设置MySQL连接信息
+:: Set MySQL connection info
 set MYSQL_HOST=localhost
 set MYSQL_PORT=3306
 set MYSQL_USER=root
 set MYSQL_PASSWORD=root
 set DB_NAME=musicmaster
 
-echo 当前数据库配置:
-echo   主机: %MYSQL_HOST%:%MYSQL_PORT%
-echo   用户: %MYSQL_USER%
-echo   密码: %MYSQL_PASSWORD%
-echo   数据库: %DB_NAME%
+echo Current database configuration:
+echo   Host: %MYSQL_HOST%:%MYSQL_PORT%
+echo   User: %MYSQL_USER%
+echo   Password: %MYSQL_PASSWORD%
+echo   Database: %DB_NAME%
 echo.
 
-set /p CONFIRM="确认以上配置正确? (Y/N): "
+set /p CONFIRM="Confirm configuration is correct? (Y/N): "
 if /i not "%CONFIRM%"=="Y" (
     echo.
-    echo 请手动编辑此脚本修改数据库配置
+    echo Please edit this script to modify database configuration.
     pause
     goto MENU
 )
 
 echo.
-echo [步骤 1/2] 测试 MySQL 连接...
+echo [Step 1/2] Testing MySQL connection...
 echo.
 
-:: 检查是否有便携版MySQL
+:: Check for portable MySQL
 if exist "%MYSQL_DIR%\bin\mysql.exe" (
     set "MYSQL_CMD=%MYSQL_DIR%\bin\mysql.exe"
+    echo Using built-in MySQL command line tool
 ) else (
     set "MYSQL_CMD=mysql"
+    echo Using system MySQL command line tool
 )
 
-:: 测试MySQL连接
+:: Test MySQL connection
 "%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
 if errorlevel 1 (
-    echo [X] MySQL 连接失败!
+    echo [X] MySQL connection failed!
     echo.
-    echo 请检查:
-    echo 1. MySQL 服务是否已启动
-    echo 2. 用户名和密码是否正确
-    echo 3. MySQL 是否允许本地连接
+    echo Please check:
+    echo 1. Is MySQL service running?
+    echo 2. Are username and password correct?
+    echo 3. Does MySQL allow local connections?
     echo.
     pause
     goto MENU
 )
 
-echo [OK] MySQL 连接成功
+echo [OK] MySQL connection successful
 
 echo.
-echo [步骤 2/2] 导入数据库结构...
+echo [Step 2/2] Importing database structure...
 echo.
 
-:: 执行SQL文件
+:: Execute SQL file
 set "SQL_FILE=%PROJECT_ROOT%backend\src\main\resources\sql\init.sql"
 
 if not exist "%SQL_FILE%" (
-    echo [X] SQL文件不存在: %SQL_FILE%
+    echo [X] SQL file not found: %SQL_FILE%
     pause
     goto MENU
 )
 
-echo 正在导入: %SQL_FILE%
+echo Importing: %SQL_FILE%
 echo.
 
 "%MYSQL_CMD%" -h%MYSQL_HOST% -P%MYSQL_PORT% -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%SQL_FILE%"
 
 if errorlevel 1 (
-    echo [X] 数据库导入失败!
+    echo [X] Database import failed!
     pause
     goto MENU
 )
 
 echo.
 echo +================================================================+
-echo :             数据库初始化完成!                                   :
+echo :             Database initialization complete!                   :
 echo +================================================================+
 echo.
-echo   数据库名: musicmaster
-echo   管理员账号: admin
-echo   管理员密码: admin123 (数据库中加密存储)
+echo   Database: musicmaster
+echo   Admin account: admin
+echo   Admin password: admin123 (encrypted in database)
 echo.
 pause
 goto MENU
 
-:: ============ 停止所有服务 ============
+:: ============ Stop All Services ============
 :STOP_ALL
 cls
 echo.
 echo ==================================================================
-echo   停止所有服务
+echo   Stop All Services
 echo ==================================================================
 echo.
-echo 正在停止后端服务 (Java)...
+echo Stopping backend service (Java)...
 taskkill /f /im java.exe 2>nul
 if errorlevel 1 (
-    echo     没有找到运行中的后端服务
+    echo     No running backend service found
 ) else (
-    echo     后端服务已停止
+    echo     Backend service stopped
 )
 
-echo 正在停止前端服务 (Node.js)...
+echo Stopping frontend service (Node.js)...
 taskkill /f /im node.exe 2>nul
 if errorlevel 1 (
-    echo     没有找到运行中的前端服务
+    echo     No running frontend service found
 ) else (
-    echo     前端服务已停止
+    echo     Frontend service stopped
 )
 
-echo 正在停止 MySQL 服务...
+echo Stopping MySQL service...
 taskkill /f /im mysqld.exe 2>nul
 if errorlevel 1 (
-    echo     没有找到运行中的 MySQL 服务
+    echo     No running MySQL service found
 ) else (
-    echo     MySQL 服务已停止
+    echo     MySQL service stopped
 )
 
 echo.
 echo ==================================================================
-echo   所有服务已停止
+echo   All services stopped
 echo ==================================================================
 echo.
 pause
 goto MENU
 
-:: ============ 帮助文档 ============
+:: ============ Help ============
 :HELP
 cls
 echo.
 echo ==================================================================
-echo   MusicMaster 使用帮助
+echo   MusicMaster Help
 echo ==================================================================
 echo.
-echo  【快速开始】
-echo   1. 首次使用请确保以下环境已安装到 runtime 目录:
-echo      - runtime\jdk        (JDK 8)
-echo      - runtime\nodejs     (Node.js 18)
-echo      - runtime\maven      (Maven 3.9+)
-echo      - runtime\mysql      (MySQL 8.0，可选)
+echo  [Quick Start]
+echo   1. First time setup:
+echo      - Extract JDK 8 to: runtime/jdk/
+echo      - Extract Node.js 18 to: runtime/nodejs/
+echo      - Extract Maven to: runtime/maven/
+echo      - Extract MySQL to: runtime/mysql/ (optional)
 echo.
-echo   2. 环境下载地址:
+echo   2. Download links:
 echo      - JDK 8:    https://adoptium.net/temurin/releases/?version=8
 echo      - Node.js:  https://nodejs.org/
 echo      - Maven:    https://maven.apache.org/download.cgi
 echo      - MySQL:    https://dev.mysql.com/downloads/mysql/
 echo.
-echo   3. 运行步骤:
-echo      - 选择 [2] 初始化数据库
-echo      - 选择 [1] 一键启动系统
+echo   3. Run steps:
+echo      - Select [2] Initialize Database
+echo      - Select [1] Start System
 echo.
-echo  【系统要求】
-echo   - Windows 10/11 (64位)
-echo   - 至少 4GB 可用内存
-echo   - 至少 2GB 可用磁盘空间
+echo  [System Requirements]
+echo   - Windows 10/11 (64-bit)
+echo   - At least 4GB available memory
+echo   - At least 2GB available disk space
 echo.
-echo  【端口占用】
-echo   - 前端端口: 8081
-echo   - 后端端口: 8080
-echo   - MySQL端口: 3306
-echo   如端口被占用，请先关闭占用程序或修改配置
+echo  [Port Usage]
+echo   - Frontend: 8081
+echo   - Backend:  8080
+echo   - MySQL:    3306
+echo   If ports are occupied, close conflicting programs or modify config.
 echo.
-echo  【默认账号】
-echo   - 管理员: admin / admin123
-echo   - 登录后请及时修改密码
+echo  [Default Account]
+echo   - Admin: admin / admin123
+echo   - Please change password after login.
 echo.
-echo  【环境隔离说明】
-echo   本脚本使用内置运行环境，不会修改系统环境变量
-echo   所有环境变量仅在脚本运行期间有效
+echo  [Environment Isolation]
+echo   This script uses portable runtime environment.
+echo   It does NOT modify system environment variables.
+echo   All environment variables are only valid during script execution.
 echo.
 echo ==================================================================
 echo.
 pause
 goto MENU
 
-:: ============ 退出 ============
+:: ============ Exit ============
 :END
 echo.
-echo 感谢使用 MusicMaster 音乐管理系统!
+echo Thank you for using MusicMaster!
 echo.
 timeout /t 2 /nobreak >nul
 exit /b 0
