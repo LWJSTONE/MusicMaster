@@ -284,7 +284,15 @@ cd /d "%BACKEND_DIR%"
 if not exist "target\musicmaster-backend-1.0.0.jar" (
     echo [i] Building with Maven, please wait...
     set "PATH=%JDK_DIR%\bin;%MAVEN_DIR%\bin;%PATH%"
-    call mvn clean package -DskipTests -q >nul 2>&1
+    call mvn clean package -DskipTests
+    if errorlevel 1 (
+        echo [X] Maven build failed! Check the errors above.
+        pause & goto MENU
+    )
+)
+if not exist "target\musicmaster-backend-1.0.0.jar" (
+    echo [X] JAR file not found after build!
+    pause & goto MENU
 )
 echo [OK] Ready
 
@@ -293,7 +301,7 @@ echo.
 echo [6/7] Starting backend...
 taskkill /f /im java.exe >nul 2>&1
 timeout /t 1 /nobreak >nul
-start "Backend" cmd /c ""%JDK_DIR%\bin\java.exe" -jar target\musicmaster-backend-1.0.0.jar"
+start "Backend" cmd /k ""%JDK_DIR%\bin\java.exe" -jar target\musicmaster-backend-1.0.0.jar"
 echo [OK] Starting on port 8080
 timeout /t 15 /nobreak >nul
 
@@ -301,7 +309,7 @@ timeout /t 15 /nobreak >nul
 echo.
 echo [7/7] Starting frontend...
 taskkill /f /fi "WINDOWTITLE eq Frontend*" >nul 2>&1
-start "Frontend" cmd /c ""%NODE_DIR%\node.exe" node_modules\@vue\cli-service\bin\vue-cli-service.js serve --port 8081"
+start "Frontend" cmd /k ""%NODE_DIR%\node.exe" node_modules\@vue\cli-service\bin\vue-cli-service.js serve --port 8081"
 echo [OK] Starting on port 8081
 timeout /t 10 /nobreak >nul
 
