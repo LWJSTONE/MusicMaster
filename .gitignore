@@ -25,7 +25,8 @@ mvnw.cmd
 .classpath
 
 # Node
-node_modules/
+# Only exclude frontend node_modules, not runtime
+frontend/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
