@@ -25,11 +25,11 @@ set "MAVEN_DIR=%RUNTIME_DIR%\maven"
 set "MYSQL_DIR=%RUNTIME_DIR%\mysql"
 set "BACKEND_DIR=%PROJECT_ROOT%backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%frontend"
+set "CONFIG_FILE=%PROJECT_ROOT%mysql_config.ini"
 
 :: MySQL settings
 set MYSQL_PORT=3306
 set MYSQL_USER=root
-set MYSQL_PASSWORD=root
 set DB_NAME=musicmaster
 
 :: ============ Display Menu ============
@@ -76,7 +76,9 @@ echo.
 echo [2/7] Setting up MySQL...
 
 :: Check for portable MySQL
+set "USE_PORTABLE_MYSQL=0"
 if exist "%MYSQL_DIR%\bin\mysqld.exe" (
+    set "USE_PORTABLE_MYSQL=1"
     :: Check if running
     tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
     if not errorlevel 1 (
@@ -96,7 +98,7 @@ if exist "%MYSQL_DIR%\bin\mysqld.exe" (
             echo datadir=%MYSQL_DIR%\data
             echo character-set-server=utf8mb4
             echo default-storage-engine=INNODB
-            echo default_authentication_plugin=mysql_native_password
+            default_authentication_plugin=mysql_native_password
             echo [client]
             echo port=%MYSQL_PORT%
             echo default-character-set=utf8mb4
@@ -126,54 +128,133 @@ if exist "%MYSQL_DIR%\bin\mysqld.exe" (
     )
     echo [OK] MySQL started
     
-    :: Set password for new MySQL
+    :: Set password for new portable MySQL (default: root)
     if not exist "%MYSQL_DIR%\data\password_set" (
-        echo [i] Setting root password...
-        "%MYSQL_DIR%\bin\mysql.exe" -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '%MYSQL_PASSWORD%'; FLUSH PRIVILEGES;" 2>nul
+        echo [i] Setting default password for portable MySQL...
+        "%MYSQL_DIR%\bin\mysql.exe" -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;" 2>nul
         echo. > "%MYSQL_DIR%\data\password_set"
-        echo [OK] Password set
+        set "MYSQL_PASSWORD=root"
+        echo [OK] Password set to 'root'
     )
     
 ) else (
-    :: No portable MySQL
+    :: No portable MySQL - use system MySQL
     tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
     if errorlevel 1 (
-        echo [X] MySQL not found!
-        echo     Extract MySQL to: %MYSQL_DIR%
-        pause & goto MENU
+        :: Try to start system MySQL service
+        echo [i] Trying to start system MySQL service...
+        net start MySQL80 >nul 2>&1
+        if errorlevel 1 net start MySQL >nul 2>&1
+        if errorlevel 1 net start MySQL57 >nul 2>&1
+        
+        :: Check again
+        tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul
+        if errorlevel 1 (
+            echo [X] MySQL not found!
+            echo     Please install MySQL or extract portable MySQL to: %MYSQL_DIR%
+            pause & goto MENU
+        )
     )
     echo [OK] System MySQL running
 )
 
 :MYSQL_CONNECTED
 
-:: Step 3: Init database
+:: Step 3: Check database connection and get password
 echo.
 echo [3/7] Checking database...
 
-:: Test connection with password
-"%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
-if errorlevel 1 (
-    :: Try without password
-    "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -e "SELECT 1;" >nul 2>&1
-    if not errorlevel 1 (
-        "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '%MYSQL_PASSWORD%'; FLUSH PRIVILEGES;" 2>nul
-    ) else (
-        echo [X] Cannot connect to MySQL!
-        pause & goto MENU
+:: Read password from config file if exists
+set "MYSQL_PASSWORD="
+if exist "%CONFIG_FILE%" (
+    for /f "usebackq tokens=1,2 delims==" %%a in ("%CONFIG_FILE%") do (
+        if "%%a"=="MYSQL_PASSWORD" set "MYSQL_PASSWORD=%%b"
+        if "%%a"=="MYSQL_USER" set "MYSQL_USER=%%b"
+    )
+    if defined MYSQL_PASSWORD (
+        echo [i] Using saved MySQL password...
     )
 )
 
-:: Check database
-"%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "USE %DB_NAME%;" >nul 2>&1
+:: Test connection with saved password
+if defined MYSQL_PASSWORD (
+    if "%USE_PORTABLE_MYSQL%"=="1" (
+        "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
+    ) else (
+        mysql -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
+    )
+    if not errorlevel 1 goto :DB_CHECK
+)
+
+:: Password not saved or wrong - prompt user
+echo.
+echo +----------------------------------------------------------------+
+echo :  MySQL Password Required                                       :
+echo +----------------------------------------------------------------+
+echo.
+echo  Cannot connect to MySQL with saved/default password.
+echo  Please enter your MySQL root password.
+echo.
+
+:PASSWORD_PROMPT
+set "MYSQL_PASSWORD="
+set /p "MYSQL_PASSWORD=Enter MySQL root password: "
+
+if not defined MYSQL_PASSWORD (
+    echo [X] Password cannot be empty!
+    goto :PASSWORD_PROMPT
+)
+
+:: Test connection with entered password
+if "%USE_PORTABLE_MYSQL%"=="1" (
+    "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
+) else (
+    mysql -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "SELECT 1;" >nul 2>&1
+)
+
+if errorlevel 1 (
+    echo [X] Cannot connect to MySQL! Wrong password?
+    set /p "RETRY=Try again? (Y/N): "
+    if /i "!RETRY!"=="Y" goto :PASSWORD_PROMPT
+    pause & goto MENU
+)
+
+:: Save password to config file
+(
+    echo # MusicMaster MySQL Configuration
+    echo MYSQL_USER=%MYSQL_USER%
+    echo MYSQL_PASSWORD=%MYSQL_PASSWORD%
+) > "%CONFIG_FILE%"
+echo [OK] Password saved to mysql_config.ini
+
+:DB_CHECK
+echo [OK] MySQL connection successful
+
+:: Update application.yml with current password
+echo [i] Updating application.yml...
+set "APP_YML=%BACKEND_DIR%\src\main\resources\application.yml"
+powershell -Command "(Get-Content '%APP_YML%') -replace '(?<=password: ).*', '%MYSQL_PASSWORD%' | Set-Content '%APP_YML%'" 2>nul
+echo [OK] Configuration updated
+
+:: Check database exists
+if "%USE_PORTABLE_MYSQL%"=="1" (
+    "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "USE %DB_NAME%;" >nul 2>&1
+) else (
+    mysql -u%MYSQL_USER% -p%MYSQL_PASSWORD% -e "USE %DB_NAME%;" >nul 2>&1
+)
+
 if errorlevel 1 (
     echo [i] Initializing database...
-    "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%BACKEND_DIR%\src\main\resources\sql\init.sql" 2>nul
+    if "%USE_PORTABLE_MYSQL%"=="1" (
+        "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%BACKEND_DIR%\src\main\resources\sql\init.sql" 2>nul
+    ) else (
+        mysql -u%MYSQL_USER% -p%MYSQL_PASSWORD% < "%BACKEND_DIR%\src\main\resources\sql\init.sql" 2>nul
+    )
     if errorlevel 1 (
         echo [X] Database init failed!
         pause & goto MENU
     )
-    echo [OK] Database ready
+    echo [OK] Database initialized
 ) else (
     echo [OK] Database exists
 )
@@ -225,7 +306,7 @@ echo :   STARTUP COMPLETE!                                            :
 echo +================================================================+
 echo.
 echo   URL: http://localhost:8081
-echo   User: admin / admin123
+echo   User: admin / 123456
 echo.
 echo Opening browser...
 timeout /t 3 /nobreak >nul
@@ -241,7 +322,6 @@ echo.
 echo Stopping all services...
 taskkill /f /im java.exe 2>nul
 taskkill /f /im node.exe 2>nul
-taskkill /f /im mysqld.exe 2>nul
 echo Done.
 pause
 goto MENU
@@ -260,7 +340,12 @@ echo      builds and runs backend and frontend.
 echo.
 echo  [Ports] Frontend:8081  Backend:8080  MySQL:3306
 echo.
-echo  [Default Login] admin / admin123
+echo  [Default Login] admin / 123456
+echo.
+echo  [MySQL Password]
+echo      First run will prompt for your MySQL root password.
+echo      Password is saved in mysql_config.ini for future runs.
+echo      Delete mysql_config.ini to reset.
 echo.
 echo ==================================================================
 pause

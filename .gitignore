@@ -49,3 +49,6 @@ runtime/*.tar.gz
 
 # Uploads directory
 uploads/
+
+# MySQL password config (contains sensitive data)
+mysql_config.ini
